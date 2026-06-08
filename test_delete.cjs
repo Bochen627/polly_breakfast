@@ -13,7 +13,7 @@ async function test() {
   try {
     const [result] = await pool.query("INSERT INTO scrap_records (ingredient_id, quantity, reason, scrap_date) VALUES (1, 10, 'Test', '2026-06-08')");
     console.log("Inserted ID:", result.insertId);
-    
+
     // Test PUT
     const putRes = await fetch('http://localhost:3000/api/scraps/' + result.insertId, {
       method: 'PUT',
@@ -21,7 +21,7 @@ async function test() {
       body: JSON.stringify({ quantity: 5, reason: 'Test Update' })
     });
     console.log("PUT Response:", putRes.status, await putRes.text());
-    
+
     // Test DELETE
     const delRes = await fetch('http://localhost:3000/api/scraps/' + result.insertId, {
       method: 'DELETE'

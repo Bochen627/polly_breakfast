@@ -130,10 +130,10 @@ app.post('/api/purchases', async (req, res) => {
     await conn.beginTransaction(); // 開啟事務
     const { purchaseDate, supplier, items } = req.body;
     let totalCost = items.reduce((sum, item) => sum + (parseFloat(item.quantity) * parseFloat(item.cost_per_unit)), 0);
-    
+
     // 寫入進貨總單
     const [poRes] = await conn.query('INSERT INTO purchase_orders (purchase_date, supplier, total_cost) VALUES (?, ?, ?)', [purchaseDate, supplier, totalCost]);
-    
+
     // 寫入進貨明細並更新庫存與成本
     for (const item of items) {
       await conn.query('INSERT INTO purchase_order_items (purchase_id, ingredient_id, quantity, cost_per_unit) VALUES (?, ?, ?, ?)', [poRes.insertId, item.ingredient_id, item.quantity, item.cost_per_unit]);
@@ -155,17 +155,17 @@ app.delete('/api/purchases/:id', async (req, res) => {
   try {
     await conn.beginTransaction();
     const purchaseId = req.params.id;
-    
+
     // 取得進貨明細以扣除庫存
     const [items] = await conn.query('SELECT * FROM purchase_order_items WHERE purchase_id = ?', [purchaseId]);
     for (const item of items) {
       await conn.query('UPDATE ingredients SET stock_quantity = stock_quantity - ? WHERE ingredient_id = ?', [item.quantity, item.ingredient_id]);
     }
-    
+
     // 刪除明細與總單
     await conn.query('DELETE FROM purchase_order_items WHERE purchase_id = ?', [purchaseId]);
     await conn.query('DELETE FROM purchase_orders WHERE purchase_id = ?', [purchaseId]);
-    
+
     await conn.commit();
     res.json({ success: true });
   } catch (err) {
@@ -206,17 +206,17 @@ app.put('/api/scraps/:id', async (req, res) => {
     await conn.beginTransaction();
     const scrapId = req.params.id;
     const { quantity, reason } = req.body;
-    
+
     // Get old scrap
     const [oldRows] = await conn.query('SELECT * FROM scrap_records WHERE scrap_id = ?', [scrapId]);
     if (oldRows.length === 0) throw new Error('Scrap not found');
     const oldScrap = oldRows[0];
-    
+
     const diff = oldScrap.quantity - parseFloat(quantity);
-    
+
     await conn.query('UPDATE scrap_records SET quantity = ?, reason = ? WHERE scrap_id = ?', [quantity, reason, scrapId]);
     await conn.query('UPDATE ingredients SET stock_quantity = stock_quantity + ? WHERE ingredient_id = ?', [diff, oldScrap.ingredient_id]);
-    
+
     await conn.commit();
     res.json({ success: true });
   } catch (err) {
@@ -249,24 +249,16 @@ app.delete('/api/scraps/:id', async (req, res) => {
   }
 });
 
-  } catch (err) {
-    await conn.rollback();
-    res.status(500).json({ error: err.message });
-  } finally {
-    conn.release();
-  }
-});
-
 // ==========================================
 // 5. 訂單結帳 API
 // ==========================================
 // 取得訂單列表
 app.get('/api/orders', async (req, res) => {
   const status = req.query.status;
-  const [orders] = status ? 
-    await pool.query('SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC', [status]) : 
+  const [orders] = status ?
+    await pool.query('SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC', [status]) :
     await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
-  
+
   for (const order of orders) {
     const [items] = await pool.query('SELECT oi.*, d.dish_name FROM order_items oi JOIN dishes d ON oi.dish_id = d.dish_id WHERE oi.order_id = ?', [order.order_id]);
     order.items = items;
@@ -277,7 +269,7 @@ app.get('/api/orders', async (req, res) => {
 // 取得單一訂單詳細資料
 app.get('/api/orders/:id', async (req, res) => {
   const [orders] = await pool.query('SELECT * FROM orders WHERE order_id = ?', [req.params.id]);
-  if (!orders.length) return res.status(404).json({error: 'Not found'});
+  if (!orders.length) return res.status(404).json({ error: 'Not found' });
   const order = orders[0];
   const [items] = await pool.query('SELECT oi.*, d.dish_name FROM order_items oi JOIN dishes d ON oi.dish_id = d.dish_id WHERE oi.order_id = ?', [order.order_id]);
   order.items = items;
@@ -314,7 +306,7 @@ app.post('/api/orders', async (req, res) => {
   try {
     await conn.beginTransaction();
     const { tableNumber, items, status = 'Pending' } = req.body;
-    
+
     let totalAmount = 0;
     // 計算總金額 (包含客製化選項加價)
     for (const item of items) {
@@ -331,17 +323,17 @@ app.post('/api/orders', async (req, res) => {
       item.price_at_order = price;
       item.customizations_str = custStr;
     }
-    
+
     // 寫入訂單主表
     const [orderRes] = await conn.query('INSERT INTO orders (table_number, total_amount, status) VALUES (?, ?, ?)', [tableNumber, totalAmount, status]);
     // 寫入訂單明細
     for (const item of items) {
       await conn.query('INSERT INTO order_items (order_id, dish_id, quantity, price_at_order, customizations) VALUES (?, ?, ?, ?, ?)', [orderRes.insertId, item.dish_id, item.quantity, item.price_at_order, item.customizations_str]);
     }
-    
+
     // 如果一開始狀態就是 Paid (已付款)，就直接扣庫存
     if (status === 'Paid') await deductStock(conn, orderRes.insertId);
-    
+
     await conn.commit();
     res.json({ success: true, orderId: orderRes.insertId });
   } catch (err) {
@@ -428,13 +420,13 @@ app.get('/api/reports/summary', async (req, res) => {
   const tr = parseFloat(rev[0].total || 0);
   const tcogs = parseFloat(cogs[0].total || 0);
   const tscr = parseFloat(scr[0].total || 0);
-  res.json({ 
-    totalRevenue: tr, 
-    totalPurchase: parseFloat(pur[0].total || 0), 
+  res.json({
+    totalRevenue: tr,
+    totalPurchase: parseFloat(pur[0].total || 0),
     monthlyPurchase: parseFloat(mPur[0].total || 0),
-    totalScrapLoss: tscr, 
-    cogs: tcogs, 
-    theoreticalProfit: tr - tcogs 
+    totalScrapLoss: tscr,
+    cogs: tcogs,
+    theoreticalProfit: tr - tcogs
   });
 });
 
@@ -443,14 +435,14 @@ app.get('/api/reports/daily-revenue', async (req, res) => {
   const d = getDateParams(req);
   const [rows] = await pool.query("SELECT DATE(created_at) AS date, SUM(total_amount) AS revenue, COUNT(order_id) AS orders_count FROM orders WHERE status = 'Paid'" + d.oFilterNoAlias + " GROUP BY DATE(created_at) ORDER BY DATE(created_at) DESC LIMIT 14", d.params);
   const [cogsRows] = await pool.query("SELECT DATE(o.created_at) AS date, SUM(oi.quantity * ri.quantity_required * i.cost_per_unit) AS cogs FROM order_items oi JOIN recipe_items ri ON oi.dish_id = ri.dish_id JOIN ingredients i ON ri.ingredient_id = i.ingredient_id JOIN orders o ON oi.order_id = o.order_id WHERE o.status = 'Paid'" + d.oFilter + " GROUP BY DATE(o.created_at)", d.params);
-  
+
   const cogsMap = {};
   cogsRows.forEach(r => {
     // MySQL DATE() might return a string or Date object depending on driver, format to YYYY-MM-DD
     const dStr = r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date;
     cogsMap[dStr] = parseFloat(r.cogs || 0);
   });
-  
+
   rows.forEach(r => {
     const dStr = r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date;
     r.cogs = cogsMap[dStr] || 0;
