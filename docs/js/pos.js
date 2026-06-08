@@ -1392,52 +1392,42 @@ function renderHourlyTrendChart(data) {
 function renderScrapLossChart(data) {
   if (charts.scrapLoss) charts.scrapLoss.destroy();
 
-  // Cut to Top 5 and group rest as "Others"
   let labels = [];
   let values = [];
 
   if (data.length === 0) {
     labels = ['無報廢紀錄'];
-    values = [1];
+    values = [0];
   } else {
-    const limit = 3;
+    const limit = 10;
     const topItems = data.slice(0, limit);
     labels = topItems.map(item => item.ingredient_name);
     values = topItems.map(item => parseFloat(item.loss_cost));
-
-    if (data.length > limit) {
-      const othersCost = data.slice(limit).reduce((sum, item) => sum + parseFloat(item.loss_cost), 0);
-      labels.push('其它');
-      values.push(othersCost);
-    }
   }
 
   const ctx = document.getElementById('scrapLossChart').getContext('2d');
   charts.scrapLoss = new Chart(ctx, {
-    type: 'doughnut',
+    type: 'bar',
     data: {
       labels: labels,
       datasets: [{
+        label: '耗損金額 ($)',
         data: values,
-        backgroundColor: [
-          '#ef4444', // Red
-          '#f59e0b', // Amber
-          '#3b82f6', // Blue
-          '#10b981', // Green
-          '#8b5cf6', // Violet
-          '#6b7280'  // Gray
-        ],
-        borderWidth: 1
+        backgroundColor: 'rgba(239, 68, 68, 0.85)',
+        hoverBackgroundColor: '#dc2626',
+        borderRadius: 6
       }]
     },
     options: {
+      indexAxis: 'y', // Horizontal bars
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          position: 'right',
-          labels: { boxWidth: 12, font: { family: 'Outfit', size: 12 } }
-        }
+        legend: { display: false }
+      },
+      scales: {
+        x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+        y: { grid: { display: false } }
       }
     }
   });
