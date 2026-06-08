@@ -787,14 +787,14 @@ function addPurchaseRowItem() {
   const existing = posState.purchaseInputItems.find(item => item.ingredient_id === ingId);
   if (existing) {
     existing.quantity += qty;
-    existing.cost_per_unit = cost; // Update latest cost
+    existing.cost_per_unit = costPerUnit; // Update latest cost
   } else {
     posState.purchaseInputItems.push({
       ingredient_id: ingId,
       name: ing.ingredient_name,
       unit: ing.unit,
       quantity: qty,
-      cost_per_unit: cost
+      cost_per_unit: costPerUnit
     });
   }
 
