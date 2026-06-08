@@ -191,6 +191,13 @@ app.post('/api/scraps', async (req, res) => {
     await conn.query('UPDATE ingredients SET stock_quantity = stock_quantity - ? WHERE ingredient_id = ?', [req.body.quantity, req.body.ingredientId]);
     await conn.commit();
     res.json({ success: true });
+  } catch (err) {
+    await conn.rollback();
+    res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
+  }
+});
 
 // Edit Scrap
 app.put('/api/scraps/:id', async (req, res) => {
