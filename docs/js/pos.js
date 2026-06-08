@@ -674,6 +674,9 @@ function renderPurchaseTable(purchases) {
       <td>${po.supplier || '未知'}</td>
       <td style="font-size:0.85rem; line-height:1.4;">${details}</td>
       <td style="font-weight:800; color:var(--primary-dark);">$${parseFloat(po.total_cost).toFixed(0)}</td>
+      <td>
+        <button class="btn btn-outline" style="padding: 2px 6px; font-size: 12px; border-color:var(--danger); color:var(--danger);" onclick="deletePurchase(${po.purchase_id})">刪除</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
@@ -1415,11 +1418,11 @@ function editScrap(scrapId, oldQty, oldReason, ingredientName, scrapDateISO, uni
   document.getElementById('editScrapQty').value = oldQty;
   document.getElementById('editScrapUnitLabel').value = unit;
   document.getElementById('editScrapReason').value = oldReason || '';
-  document.getElementById('editScrapModal').style.display = 'flex';
+  document.getElementById('editScrapModal').classList.add('active');
 }
 
 function closeEditScrapModal() {
-  document.getElementById('editScrapModal').style.display = 'none';
+  document.getElementById('editScrapModal').classList.remove('active');
 }
 
 async function submitEditScrap() {
