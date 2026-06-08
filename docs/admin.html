@@ -151,9 +151,6 @@
 
         <!-- Tab 2.2: Purchase Logs Table -->
         <div id="subpanel-purchase" class="pos-table-container" style="display:none;">
-          <div style="margin-bottom: 10px;">
-            <button class="btn btn-secondary" onclick="openPurchaseModal()">新增進貨</button>
-          </div>
           <table class="pos-table">
             <thead>
               <tr>
@@ -161,7 +158,8 @@
                 <th>進貨日期</th>
                 <th>供應商</th>
                 <th>進貨品項明細</th>
-                <th>總進貨金額</th>
+                <th>總進貨額</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody id="purchaseLogsTableBody">
@@ -393,18 +391,28 @@
       <h2 class="modal-title">編輯報廢紀錄</h2>
       <input type="hidden" id="editScrapId">
       <div class="form-group">
+        <label>報廢日期</label>
+        <input type="date" id="editScrapDate" class="form-control" disabled>
+      </div>
+      <div class="form-group">
         <label>報廢食材</label>
         <input type="text" id="editScrapIngredientName" class="form-control" disabled>
       </div>
-      <div class="form-group">
-        <label for="editScrapQty">報廢數量</label>
-        <input type="number" id="editScrapQty" class="form-control" step="0.1" min="0">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="editScrapQty">報廢數量</label>
+          <input type="number" id="editScrapQty" class="form-control" step="0.01" min="0.01">
+        </div>
+        <div class="form-group">
+          <label>單位</label>
+          <input type="text" id="editScrapUnitLabel" class="form-control" readonly style="background:#eee;">
+        </div>
       </div>
       <div class="form-group">
-        <label for="editScrapReason">原因說明</label>
-        <input type="text" id="editScrapReason" class="form-control">
+        <label for="editScrapReason">報廢原因</label>
+        <input type="text" id="editScrapReason" class="form-control" placeholder="例如: 過期、損壞、掉落">
       </div>
-      <div class="form-row" style="margin-top:20px; justify-content:flex-end; gap:10px;">
+      <div class="btn-group-right">
         <button class="btn btn-secondary" onclick="closeEditScrapModal()">取消</button>
         <button class="btn btn-primary" onclick="submitEditScrap()">儲存變更</button>
       </div>

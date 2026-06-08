@@ -702,7 +702,7 @@ function renderScrapTable(scraps) {
       <td style="color:var(--danger); font-weight:700;">$${cost.toFixed(1)}</td>
       <td style="font-size:0.85rem; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${s.reason}">${s.reason}</td>
       <td>
-        <button class="btn btn-outline" style="padding: 2px 6px; font-size: 12px; margin-right:4px;" onclick="editScrap(${s.scrap_id}, ${s.quantity}, '${s.reason || ''}', '${s.ingredient_name}')">編輯</button>
+        <button class="btn btn-outline" style="padding: 2px 6px; font-size: 12px; margin-right:4px;" onclick="editScrap(${s.scrap_id}, ${s.quantity}, '${s.reason || ''}', '${s.ingredient_name}', '${s.scrap_date}', '${s.unit}')">編輯</button>
         <button class="btn btn-outline" style="padding: 2px 6px; font-size: 12px; border-color:var(--danger); color:var(--danger);" onclick="deleteScrap(${s.scrap_id})">刪除</button>
       </td>
     `;
@@ -1408,16 +1408,30 @@ function printBusinessReport() {
   document.body.classList.remove('print-mode-report');
 }
 
-async function editScrap(scrapId, oldQty, oldReason) {
-  const qtyStr = prompt('請輸入新的報廢數量:', oldQty);
-  if (qtyStr === null) return;
-  const quantity = parseFloat(qtyStr);
+function editScrap(scrapId, oldQty, oldReason, ingredientName, scrapDateISO, unit) {
+  document.getElementById('editScrapId').value = scrapId;
+  document.getElementById('editScrapDate').value = scrapDateISO.substring(0, 10);
+  document.getElementById('editScrapIngredientName').value = ingredientName;
+  document.getElementById('editScrapQty').value = oldQty;
+  document.getElementById('editScrapUnitLabel').value = unit;
+  document.getElementById('editScrapReason').value = oldReason || '';
+  document.getElementById('editScrapModal').style.display = 'flex';
+}
+
+function closeEditScrapModal() {
+  document.getElementById('editScrapModal').style.display = 'none';
+}
+
+async function submitEditScrap() {
+  const scrapId = document.getElementById('editScrapId').value;
+  const quantity = parseFloat(document.getElementById('editScrapQty').value);
+  const reason = document.getElementById('editScrapReason').value.trim();
+
   if (isNaN(quantity) || quantity <= 0) {
     alert('無效的數量');
     return;
   }
-  const reason = prompt('請輸入新的原因說明:', oldReason) || '';
-  
+
   try {
     const res = await fetch(API_BASE_URL + '/api/scraps/' + scrapId, {
       method: 'PUT',
@@ -1426,6 +1440,7 @@ async function editScrap(scrapId, oldQty, oldReason) {
     });
     const result = await res.json();
     if (result.success) {
+      closeEditScrapModal();
       loadInventoryData(); // reload
     } else {
       alert('更新失敗: ' + result.error);
