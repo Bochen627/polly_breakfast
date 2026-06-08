@@ -745,12 +745,14 @@ function addPurchaseRowItem() {
 
   const ingId = parseInt(select.value);
   const qty = parseFloat(qtyInput.value) || 0;
-  const cost = parseFloat(costInput.value) || 0;
+  const totalCost = parseFloat(costInput.value) || 0;
 
-  if (!ingId || qty <= 0 || cost < 0) {
-    alert('請輸入正確的食材數量與單價');
+  if (!ingId || qty <= 0 || totalCost < 0) {
+    alert('請輸入正確數量與金額');
     return;
   }
+
+  const costPerUnit = totalCost / qty;
 
   const ing = posState.ingredients.find(i => i.ingredient_id === ingId);
   
