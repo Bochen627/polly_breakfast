@@ -149,11 +149,9 @@ function switchPanel(panelId) {
 
 function switchInventoryTab(tabId) {
   posState.currentInventoryTab = tabId;
-  
-  document.querySelectorAll('#panel-inventory .category-tab').forEach(tab => {
-    tab.classList.remove('active');
-  });
-  document.getElementById(`tab-${tabId}-btn`).classList.add('active');
+  document.getElementById('tab-stock-btn').className = tabId === 'stock' ? 'btn btn-primary' : 'btn btn-outline';
+  document.getElementById('tab-purchase-btn').className = tabId === 'purchase' ? 'btn btn-primary' : 'btn btn-outline';
+  document.getElementById('tab-scrap-btn').className = tabId === 'scrap' ? 'btn btn-primary' : 'btn btn-outline';
 
   // Hide/Show tables
   document.getElementById('subpanel-stock').style.display = tabId === 'stock' ? 'block' : 'none';

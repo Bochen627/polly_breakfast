@@ -151,6 +151,9 @@
 
         <!-- Tab 2.2: Purchase Logs Table -->
         <div id="subpanel-purchase" class="pos-table-container" style="display:none;">
+          <div style="margin-bottom: 10px;">
+            <button class="btn btn-secondary" onclick="openPurchaseModal()">新增進貨</button>
+          </div>
           <table class="pos-table">
             <thead>
               <tr>
@@ -380,6 +383,30 @@
       <div class="btn-group-right">
         <button class="btn btn-secondary" onclick="closePurchaseModal()">取消</button>
         <button class="btn btn-primary" onclick="submitPurchaseInvoice()">送出存檔</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Editing Scrap -->
+  <div class="modal-overlay" id="editScrapModal">
+    <div class="modal-box">
+      <h2 class="modal-title">編輯報廢紀錄</h2>
+      <input type="hidden" id="editScrapId">
+      <div class="form-group">
+        <label>報廢食材</label>
+        <input type="text" id="editScrapIngredientName" class="form-control" disabled>
+      </div>
+      <div class="form-group">
+        <label for="editScrapQty">報廢數量</label>
+        <input type="number" id="editScrapQty" class="form-control" step="0.1" min="0">
+      </div>
+      <div class="form-group">
+        <label for="editScrapReason">原因說明</label>
+        <input type="text" id="editScrapReason" class="form-control">
+      </div>
+      <div class="form-row" style="margin-top:20px; justify-content:flex-end; gap:10px;">
+        <button class="btn btn-secondary" onclick="closeEditScrapModal()">取消</button>
+        <button class="btn btn-primary" onclick="submitEditScrap()">儲存變更</button>
       </div>
     </div>
   </div>
