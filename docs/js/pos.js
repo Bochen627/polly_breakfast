@@ -22,7 +22,11 @@ let charts = {
 
 document.addEventListener('DOMContentLoaded', () => {
   // Set default dates
-  const today = new Date().toISOString().split('T')[0];
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const today = `${year}-${month}-${day}`;
   if (document.getElementById('purchaseDate')) document.getElementById('purchaseDate').value = today;
   if (document.getElementById('scrapDate')) document.getElementById('scrapDate').value = today;
 
@@ -170,13 +174,37 @@ function switchOrderTab(tab) {
   document.getElementById('tabHistoryOrders').className = tab === 'history' ? 'btn btn-primary' : 'btn btn-secondary';
   document.getElementById('tabPendingOrders').style.padding = '4px 8px';
   document.getElementById('tabHistoryOrders').style.padding = '4px 8px';
+  
+  const historyDateInput = document.getElementById('historyOrderDate');
+  if (historyDateInput) {
+    if (tab === 'history') {
+      historyDateInput.style.display = 'inline-block';
+      if (!historyDateInput.value) {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        historyDateInput.value = `${year}-${month}-${day}`;
+      }
+    } else {
+      historyDateInput.style.display = 'none';
+    }
+  }
+
   fetchOrdersList();
 }
 
 async function fetchOrdersList() {
   try {
     const status = posState.currentOrderTab === 'history' ? 'Paid' : 'Pending';
-    const res = await fetch(`${API_BASE_URL}/api/orders?status=${status}`);
+    let url = `${API_BASE_URL}/api/orders?status=${status}`;
+    if (status === 'Paid') {
+      const historyDateInput = document.getElementById('historyOrderDate');
+      if (historyDateInput && historyDateInput.value) {
+        url += `&date=${historyDateInput.value}`;
+      }
+    }
+    const res = await fetch(url);
     posState.pendingOrders = await res.json();
     renderOrdersList();
   } catch (error) {
@@ -1178,19 +1206,33 @@ async function deleteRecipeRowItem(ingredientId) {
 // Panel 4: Reports & Charts Methods
 // ----------------------------------------------------
 
+function getLocalISODate(d) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function initDateFilters() {
   const today = new Date();
-  const past = new Date(today);
-  past.setDate(past.getDate() - 14);
+  const day = today.getDay();
+  // Calculate difference to Monday
+  const diffToMonday = today.getDate() - day + (day === 0 ? -6 : 1);
+  
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(diffToMonday);
+  
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
 
   const startInput = document.getElementById('reportStartDate');
   const endInput = document.getElementById('reportEndDate');
   
   if (startInput && !startInput.value) {
-    startInput.value = past.toISOString().split('T')[0];
+    startInput.value = getLocalISODate(startOfWeek);
   }
   if (endInput && !endInput.value) {
-    endInput.value = today.toISOString().split('T')[0];
+    endInput.value = getLocalISODate(endOfWeek);
   }
 }
 

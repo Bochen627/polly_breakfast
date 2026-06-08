@@ -265,9 +265,27 @@ app.delete('/api/scraps/:id', async (req, res) => {
 // 取得訂單列表
 app.get('/api/orders', async (req, res) => {
   const status = req.query.status;
-  const [orders] = status ?
-    await pool.query('SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC', [status]) :
-    await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
+  const dateStr = req.query.date;
+
+  let query = 'SELECT * FROM orders';
+  let queryParams = [];
+  const conditions = [];
+
+  if (status) {
+    conditions.push('status = ?');
+    queryParams.push(status);
+  }
+  if (dateStr) {
+    conditions.push('DATE(DATE_ADD(created_at, INTERVAL 8 HOUR)) = ?');
+    queryParams.push(dateStr);
+  }
+
+  if (conditions.length > 0) {
+    query += ' WHERE ' + conditions.join(' AND ');
+  }
+  query += ' ORDER BY created_at DESC';
+
+  const [orders] = await pool.query(query, queryParams);
 
   for (const order of orders) {
     const [items] = await pool.query('SELECT oi.*, d.dish_name FROM order_items oi JOIN dishes d ON oi.dish_id = d.dish_id WHERE oi.order_id = ?', [order.order_id]);
@@ -409,10 +427,10 @@ function getDateParams(req) {
     hasDates,
     startDate,
     endDate,
-    oFilter: hasDates ? " AND DATE(o.created_at) >= ? AND DATE(o.created_at) <= ? " : "",
-    oFilterNoAlias: hasDates ? " AND DATE(created_at) >= ? AND DATE(created_at) <= ? " : "",
-    purFilter: hasDates ? " WHERE DATE(purchase_date) >= ? AND DATE(purchase_date) <= ? " : "",
-    scrFilter: hasDates ? " WHERE DATE(sr.created_at) >= ? AND DATE(sr.created_at) <= ? " : "",
+    oFilter: hasDates ? " AND DATE(DATE_ADD(o.created_at, INTERVAL 8 HOUR)) >= ? AND DATE(DATE_ADD(o.created_at, INTERVAL 8 HOUR)) <= ? " : "",
+    oFilterNoAlias: hasDates ? " AND DATE(DATE_ADD(created_at, INTERVAL 8 HOUR)) >= ? AND DATE(DATE_ADD(created_at, INTERVAL 8 HOUR)) <= ? " : "",
+    purFilter: hasDates ? " WHERE purchase_date >= ? AND purchase_date <= ? " : "",
+    scrFilter: hasDates ? " WHERE scrap_date >= ? AND scrap_date <= ? " : "",
     params: hasDates ? [startDate, endDate] : []
   };
 }
@@ -443,18 +461,27 @@ app.get('/api/reports/summary', async (req, res) => {
 // 每日營業額統計 (圖表用)
 app.get('/api/reports/daily-revenue', async (req, res) => {
   const d = getDateParams(req);
-  const [rows] = await pool.query("SELECT DATE(created_at) AS date, SUM(total_amount) AS revenue, COUNT(order_id) AS orders_count FROM orders WHERE status = 'Paid'" + d.oFilterNoAlias + " GROUP BY DATE(created_at) ORDER BY DATE(created_at) DESC LIMIT 14", d.params);
-  const [cogsRows] = await pool.query("SELECT DATE(o.created_at) AS date, SUM(oi.quantity * ri.quantity_required * i.cost_per_unit) AS cogs FROM order_items oi JOIN recipe_items ri ON oi.dish_id = ri.dish_id JOIN ingredients i ON ri.ingredient_id = i.ingredient_id JOIN orders o ON oi.order_id = o.order_id WHERE o.status = 'Paid'" + d.oFilter + " GROUP BY DATE(o.created_at)", d.params);
+  const [rows] = await pool.query("SELECT DATE(DATE_ADD(created_at, INTERVAL 8 HOUR)) AS date, SUM(total_amount) AS revenue, COUNT(order_id) AS orders_count FROM orders WHERE status = 'Paid'" + d.oFilterNoAlias + " GROUP BY DATE(DATE_ADD(created_at, INTERVAL 8 HOUR)) ORDER BY DATE(DATE_ADD(created_at, INTERVAL 8 HOUR)) DESC LIMIT 14", d.params);
+  const [cogsRows] = await pool.query("SELECT DATE(DATE_ADD(o.created_at, INTERVAL 8 HOUR)) AS date, SUM(oi.quantity * ri.quantity_required * i.cost_per_unit) AS cogs FROM order_items oi JOIN recipe_items ri ON oi.dish_id = ri.dish_id JOIN ingredients i ON ri.ingredient_id = i.ingredient_id JOIN orders o ON oi.order_id = o.order_id WHERE o.status = 'Paid'" + d.oFilter + " GROUP BY DATE(DATE_ADD(o.created_at, INTERVAL 8 HOUR))", d.params);
 
   const cogsMap = {};
   cogsRows.forEach(r => {
     // MySQL DATE() might return a string or Date object depending on driver, format to YYYY-MM-DD
-    const dStr = r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date;
+    let dStr = r.date;
+    if (r.date instanceof Date) {
+      // Create local JS date to avoid UTC conversion issues
+      const dt = new Date(r.date.getTime() - r.date.getTimezoneOffset() * 60000);
+      dStr = dt.toISOString().split('T')[0];
+    }
     cogsMap[dStr] = parseFloat(r.cogs || 0);
   });
 
   rows.forEach(r => {
-    const dStr = r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date;
+    let dStr = r.date;
+    if (r.date instanceof Date) {
+      const dt = new Date(r.date.getTime() - r.date.getTimezoneOffset() * 60000);
+      dStr = dt.toISOString().split('T')[0];
+    }
     r.cogs = cogsMap[dStr] || 0;
     r.gross_profit = parseFloat(r.revenue) - r.cogs;
   });
@@ -471,7 +498,7 @@ app.get('/api/reports/top-selling', async (req, res) => {
 // 營業尖峰時段分析 (圖表用)
 app.get('/api/reports/hourly-trend', async (req, res) => {
   const d = getDateParams(req);
-  const [rows] = await pool.query("SELECT HOUR(created_at) AS hour, SUM(total_amount) AS revenue, COUNT(order_id) AS orders_count FROM orders WHERE status = 'Paid'" + d.oFilterNoAlias + " GROUP BY HOUR(created_at) ORDER BY HOUR(created_at) ASC", d.params);
+  const [rows] = await pool.query("SELECT HOUR(DATE_ADD(created_at, INTERVAL 8 HOUR)) AS hour, SUM(total_amount) AS revenue, COUNT(order_id) AS orders_count FROM orders WHERE status = 'Paid'" + d.oFilterNoAlias + " GROUP BY HOUR(DATE_ADD(created_at, INTERVAL 8 HOUR)) ORDER BY HOUR(DATE_ADD(created_at, INTERVAL 8 HOUR)) ASC", d.params);
   res.json(rows);
 });
 
