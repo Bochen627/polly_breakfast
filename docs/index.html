@@ -93,7 +93,7 @@
       <div class="modal-box">
         <h2 class="modal-title" id="customizationModalTitle">客製化選項</h2>
         
-        <div class="customization-group">
+        <div class="customization-group" id="custGroupAddons">
           <h3 style="font-size:1rem; margin-bottom:8px;">加料區</h3>
           <label style="display:flex; justify-content:space-between; margin-bottom:8px;">
             <span><input type="checkbox" class="cust-checkbox" value="加蛋" data-price="15"> 加蛋 (+$15)</span>
@@ -103,15 +103,15 @@
           </label>
         </div>
 
-        <div class="customization-group" style="margin-top:16px;">
+        <div class="customization-group" id="custGroupToast" style="margin-top:16px;">
           <h3 style="font-size:1rem; margin-bottom:8px;">備註</h3>
           <label style="display:flex; justify-content:space-between; margin-bottom:8px;">
             <span><input type="checkbox" class="cust-checkbox" value="切邊" data-price="0"> 吐司切邊</span>
           </label>
         </div>
 
-        <div class="customization-group" style="margin-top:16px;">
-          <h3 style="font-size:1rem; margin-bottom:8px;">飲品冰塊 (限飲品)</h3>
+        <div class="customization-group" id="custGroupIce" style="margin-top:16px;">
+          <h3 style="font-size:1rem; margin-bottom:8px;">飲品冰塊</h3>
           <select id="custIce" class="form-control" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
             <option value="">不適用</option>
             <option value="正常冰">正常冰</option>
@@ -122,8 +122,8 @@
           </select>
         </div>
 
-        <div class="customization-group" style="margin-top:16px;">
-          <h3 style="font-size:1rem; margin-bottom:8px;">飲品甜度 (限飲品)</h3>
+        <div class="customization-group" id="custGroupSugar" style="margin-top:16px;">
+          <h3 style="font-size:1rem; margin-bottom:8px;">飲品甜度</h3>
           <select id="custSugar" class="form-control" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
             <option value="">不適用</option>
             <option value="正常糖">正常糖</option>

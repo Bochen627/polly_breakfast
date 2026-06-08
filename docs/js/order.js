@@ -239,6 +239,23 @@ function openCustomizationModal(dishId) {
   document.getElementById('custIce').value = '';
   document.getElementById('custSugar').value = '';
 
+  // Determine dish type for custom options
+  const catName = dish.category_name || '';
+  const isDrink = catName.includes('飲品') || catName.includes('飲料') || catName.includes('喝');
+  const isToast = dish.dish_name.includes('吐司') || catName.includes('吐司');
+  const isFood = !isDrink;
+
+  // Toggle visibility of customization groups
+  const grpAddons = document.getElementById('custGroupAddons');
+  const grpToast = document.getElementById('custGroupToast');
+  const grpIce = document.getElementById('custGroupIce');
+  const grpSugar = document.getElementById('custGroupSugar');
+
+  if (grpAddons) grpAddons.style.display = isFood ? 'block' : 'none';
+  if (grpToast) grpToast.style.display = isToast ? 'block' : 'none';
+  if (grpIce) grpIce.style.display = isDrink ? 'block' : 'none';
+  if (grpSugar) grpSugar.style.display = isDrink ? 'block' : 'none';
+
   document.getElementById('customizationModalOverlay').classList.add('active');
 }
 
