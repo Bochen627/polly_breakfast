@@ -149,6 +149,33 @@ app.post('/api/purchases', async (req, res) => {
   }
 });
 
+// 刪除進貨單
+app.delete('/api/purchases/:id', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const purchaseId = req.params.id;
+    
+    // 取得進貨明細以扣除庫存
+    const [items] = await conn.query('SELECT * FROM purchase_order_items WHERE purchase_id = ?', [purchaseId]);
+    for (const item of items) {
+      await conn.query('UPDATE ingredients SET stock_quantity = stock_quantity - ? WHERE ingredient_id = ?', [item.quantity, item.ingredient_id]);
+    }
+    
+    // 刪除明細與總單
+    await conn.query('DELETE FROM purchase_order_items WHERE purchase_id = ?', [purchaseId]);
+    await conn.query('DELETE FROM purchase_orders WHERE purchase_id = ?', [purchaseId]);
+    
+    await conn.commit();
+    res.json({ success: true });
+  } catch (err) {
+    await conn.rollback();
+    res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
+  }
+});
+
 // 取得報廢紀錄
 app.get('/api/scraps', async (req, res) => {
   const [rows] = await pool.query('SELECT sr.*, i.ingredient_name, i.unit, i.cost_per_unit FROM scrap_records sr JOIN ingredients i ON sr.ingredient_id = i.ingredient_id ORDER BY sr.scrap_date DESC, sr.scrap_id DESC');
@@ -388,17 +415,40 @@ app.get('/api/reports/summary', async (req, res) => {
   const [pur] = await pool.query("SELECT SUM(total_cost) AS total FROM purchase_orders" + d.purFilter, d.params);
   const [scr] = await pool.query("SELECT SUM(sr.quantity * i.cost_per_unit) AS total FROM scrap_records sr JOIN ingredients i ON sr.ingredient_id = i.ingredient_id" + d.scrFilter, d.params);
   const [cogs] = await pool.query("SELECT SUM(oi.quantity * ri.quantity_required * i.cost_per_unit) AS total FROM order_items oi JOIN recipe_items ri ON oi.dish_id = ri.dish_id JOIN ingredients i ON ri.ingredient_id = i.ingredient_id JOIN orders o ON oi.order_id = o.order_id WHERE o.status = 'Paid'" + d.oFilter, d.params);
-  
+  const targetDateStr = req.query.endDate || new Date().toISOString().split('T')[0];
+  const [mPur] = await pool.query("SELECT SUM(total_cost) AS total FROM purchase_orders WHERE YEAR(purchase_date) = YEAR(?) AND MONTH(purchase_date) = MONTH(?)", [targetDateStr, targetDateStr]);
+
   const tr = parseFloat(rev[0].total || 0);
   const tcogs = parseFloat(cogs[0].total || 0);
   const tscr = parseFloat(scr[0].total || 0);
-  res.json({ totalRevenue: tr, totalPurchase: parseFloat(pur[0].total || 0), totalScrapLoss: tscr, cogs: tcogs, theoreticalProfit: tr - tcogs - tscr });
+  res.json({ 
+    totalRevenue: tr, 
+    totalPurchase: parseFloat(pur[0].total || 0), 
+    monthlyPurchase: parseFloat(mPur[0].total || 0),
+    totalScrapLoss: tscr, 
+    cogs: tcogs, 
+    theoreticalProfit: tr - tcogs 
+  });
 });
 
 // 每日營業額統計 (圖表用)
 app.get('/api/reports/daily-revenue', async (req, res) => {
   const d = getDateParams(req);
   const [rows] = await pool.query("SELECT DATE(created_at) AS date, SUM(total_amount) AS revenue, COUNT(order_id) AS orders_count FROM orders WHERE status = 'Paid'" + d.oFilterNoAlias + " GROUP BY DATE(created_at) ORDER BY DATE(created_at) DESC LIMIT 14", d.params);
+  const [cogsRows] = await pool.query("SELECT DATE(o.created_at) AS date, SUM(oi.quantity * ri.quantity_required * i.cost_per_unit) AS cogs FROM order_items oi JOIN recipe_items ri ON oi.dish_id = ri.dish_id JOIN ingredients i ON ri.ingredient_id = i.ingredient_id JOIN orders o ON oi.order_id = o.order_id WHERE o.status = 'Paid'" + d.oFilter + " GROUP BY DATE(o.created_at)", d.params);
+  
+  const cogsMap = {};
+  cogsRows.forEach(r => {
+    // MySQL DATE() might return a string or Date object depending on driver, format to YYYY-MM-DD
+    const dStr = r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date;
+    cogsMap[dStr] = parseFloat(r.cogs || 0);
+  });
+  
+  rows.forEach(r => {
+    const dStr = r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date;
+    r.cogs = cogsMap[dStr] || 0;
+    r.gross_profit = parseFloat(r.revenue) - r.cogs;
+  });
   res.json(rows);
 });
 

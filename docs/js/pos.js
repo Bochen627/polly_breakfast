@@ -1204,9 +1204,9 @@ async function loadReportsData() {
     const summaryRes = await fetch(API_BASE_URL + '/api/reports/summary' + queryStr);
     const summaryData = await summaryRes.json();
     document.getElementById('statTotalRevenue').textContent = '$' + summaryData.totalRevenue.toLocaleString();
-    document.getElementById('statTotalCogs').textContent = '$' + summaryData.cogs.toLocaleString();
+    document.getElementById('statGrossProfit').textContent = '$' + summaryData.theoreticalProfit.toLocaleString();
+    document.getElementById('statMonthlyPurchase').textContent = '$' + summaryData.monthlyPurchase.toLocaleString();
     document.getElementById('statTotalScrap').textContent = '$' + summaryData.totalScrapLoss.toLocaleString();
-    document.getElementById('statProfit').textContent = '$' + summaryData.theoreticalProfit.toLocaleString();
 
     // 2. Daily revenue chart
     const dailyRes = await fetch(API_BASE_URL + '/api/reports/daily-revenue' + queryStr);
@@ -1237,31 +1237,44 @@ async function loadReportsData() {
 function renderDailyRevenueChart(data) {
   if (charts.dailyRevenue) charts.dailyRevenue.destroy();
   
-  // Format labels and values. Need reverse to show chronological order
   const labels = data.map(item => new Date(item.date).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })).reverse();
   const revenues = data.map(item => parseFloat(item.revenue)).reverse();
+  const grossProfits = data.map(item => parseFloat(item.gross_profit || 0)).reverse();
 
   const ctx = document.getElementById('dailyRevenueChart').getContext('2d');
   charts.dailyRevenue = new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,
-      datasets: [{
-        label: '每日營業額(元)',
-        data: revenues,
-        borderColor: '#78350f',
-        backgroundColor: 'rgba(245,158,11,0.1)',
-        fill: true,
-        tension: 0.3,
-        borderWidth: 3,
-        pointBackgroundColor: '#f59e0b',
-        pointRadius: 4
-      }]
+      datasets: [
+        {
+          label: '營業額($)',
+          data: revenues,
+          borderColor: '#78350f',
+          backgroundColor: 'rgba(245,158,11,0.1)',
+          fill: true,
+          tension: 0.3,
+          borderWidth: 3,
+          pointBackgroundColor: '#f59e0b',
+          pointRadius: 4
+        },
+        {
+          label: '毛利($)',
+          data: grossProfits,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16,185,129,0.1)',
+          fill: true,
+          tension: 0.3,
+          borderWidth: 3,
+          pointBackgroundColor: '#10b981',
+          pointRadius: 4
+        }
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: { legend: { display: true } },
       scales: {
         y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
         x: { grid: { display: false } }
@@ -1305,45 +1318,71 @@ function renderTopSellingChart(data) {
 function renderHourlyTrendChart(data) {
   if (charts.hourlyTrend) charts.hourlyTrend.destroy();
 
-  // Create full 24h array placeholder, fill with database actuals
-  const hours = Array.from({ length: 24 }, (_, i) => `${i}:00`);
   const revenues = Array(24).fill(0);
+  const orders = Array(24).fill(0);
 
   data.forEach(item => {
     revenues[parseInt(item.hour)] = parseFloat(item.revenue);
+    orders[parseInt(item.hour)] = parseInt(item.orders_count);
   });
 
-  // Filter out late night/early morning if empty to make it look nicer
   const showHours = [];
   const showRevenues = [];
+  const showOrders = [];
   // Focus on 5am to 2pm for breakfast shop
   for (let h = 5; h <= 15; h++) {
     showHours.push(`${h}:00`);
     showRevenues.push(revenues[h]);
+    showOrders.push(orders[h]);
   }
 
   const ctx = document.getElementById('hourlyTrendChart').getContext('2d');
   charts.hourlyTrend = new Chart(ctx, {
-    type: 'line',
+    type: 'bar',
     data: {
       labels: showHours,
-      datasets: [{
-        label: '銷售總額 (元)',
-        data: showRevenues,
-        borderColor: '#10b981',
-        backgroundColor: 'rgba(16,185,129,0.05)',
-        borderWidth: 3,
-        tension: 0.3,
-        pointBackgroundColor: '#10b981',
-        fill: true
-      }]
+      datasets: [
+        {
+          type: 'line',
+          label: '營收($)',
+          data: showRevenues,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16,185,129,0.1)',
+          borderWidth: 3,
+          tension: 0.3,
+          pointBackgroundColor: '#10b981',
+          fill: true,
+          yAxisID: 'y-revenue'
+        },
+        {
+          type: 'bar',
+          label: '訂單數',
+          data: showOrders,
+          backgroundColor: 'rgba(59,130,246,0.7)',
+          borderRadius: 4,
+          yAxisID: 'y-orders'
+        }
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: { legend: { display: true } },
       scales: {
-        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+        'y-revenue': {
+          type: 'linear',
+          position: 'left',
+          beginAtZero: true,
+          title: { display: true, text: '營收($)' },
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        },
+        'y-orders': {
+          type: 'linear',
+          position: 'right',
+          beginAtZero: true,
+          title: { display: true, text: '訂單數' },
+          grid: { drawOnChartArea: false }
+        },
         x: { grid: { display: false } }
       }
     }
@@ -1361,7 +1400,7 @@ function renderScrapLossChart(data) {
     labels = ['無報廢紀錄'];
     values = [1];
   } else {
-    const limit = 4;
+    const limit = 3;
     const topItems = data.slice(0, limit);
     labels = topItems.map(item => item.ingredient_name);
     values = topItems.map(item => parseFloat(item.loss_cost));
