@@ -627,12 +627,14 @@ function renderInventoryTable() {
   posState.ingredients.forEach(ing => {
     const tr = document.createElement('tr');
     
-    // Check safety stock levels (arbitrary safety warning threshold at 50 units)
+    // Check safety stock levels (arbitrary safety warning threshold defaults to 50 if null)
     const stockQty = parseFloat(ing.stock_quantity);
+    const safeStock = parseFloat(ing.safe_stock_level) || 50;
+    
     let stockStatus = '<span class="badge badge-success">充足</span>';
     let stockValClass = '';
     
-    if (stockQty < 50) {
+    if (stockQty < safeStock) {
       stockStatus = '<span class="badge badge-danger">低於安全庫存 (建議補貨)</span>';
       stockValClass = 'low-stock-alert';
     }
@@ -642,11 +644,36 @@ function renderInventoryTable() {
       <td style="font-weight:700;">${ing.ingredient_name}</td>
       <td class="${stockValClass}" style="font-weight:700;">${stockQty.toFixed(1)}</td>
       <td>${ing.unit}</td>
-      <td>$${parseFloat(ing.cost_per_unit).toFixed(2)}</td>
+      <td>$${parseFloat(ing.cost_per_unit || 0).toFixed(2)}</td>
+      <td><input type="number" step="any" min="0" class="form-control" style="width: 80px; padding: 4px; font-size: 0.9rem; text-align: center;" value="${safeStock}" onchange="updateSafeStock(${ing.ingredient_id}, this.value)"></td>
       <td>${stockStatus}</td>
     `;
     tbody.appendChild(tr);
   });
+}
+
+async function updateSafeStock(ingredientId, newValue) {
+  const safeStockLevel = parseFloat(newValue) || 0;
+  try {
+    const res = await fetch(API_BASE_URL + '/api/ingredients/' + ingredientId + '/safe-stock', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ safeStockLevel })
+    });
+    const data = await res.json();
+    if (data.success) {
+      // Find and update local state
+      const ing = posState.ingredients.find(i => i.ingredient_id === ingredientId);
+      if (ing) ing.safe_stock_level = safeStockLevel;
+      // Re-render table without fetching to show updated status immediately
+      renderInventoryTable();
+    } else {
+      alert('更新安全存量失敗: ' + data.error);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('更新安全存量發生錯誤');
+  }
 }
 
 function renderPurchaseTable(purchases) {

@@ -107,6 +107,16 @@ app.get('/api/ingredients', async (req, res) => {
   res.json(rows);
 });
 
+app.put('/api/ingredients/:id/safe-stock', async (req, res) => {
+  try {
+    const { safeStockLevel } = req.body;
+    await pool.query('UPDATE ingredients SET safe_stock_level = ? WHERE ingredient_id = ?', [safeStockLevel, req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 取得庫存狀態 (其實跟取得原物料一樣)
 app.get('/api/inventory', async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM ingredients ORDER BY ingredient_id ASC');
