@@ -409,35 +409,6 @@ function printReceipt() {
   window.print();
 }
 
-async function printShiftReport() {
-  const dateStr = new Date().toLocaleDateString('zh-TW');
-  const revenue = document.getElementById('statTotalRevenue').textContent;
-  const cogs = document.getElementById('statTotalCogs').textContent;
-  const scrap = document.getElementById('statTotalScrap').textContent;
-  const profit = document.getElementById('statProfit').textContent;
-  
-  const printContent = `
-    <div style="width:100%; text-align:center;">
-      <h2 style="margin:0;">波里早餐店</h2>
-      <p style="margin:4px 0;">交班營業報表</p>
-      <p style="margin:4px 0;">列印時間: ${new Date().toLocaleString('zh-TW')}</p>
-      <hr style="border-top:1px dashed #000; margin:16px 0;">
-      <div style="text-align:left; font-size:14px; line-height:2;">
-        <div style="display:flex; justify-content:space-between;"><span>累積營收總額:</span> <strong>${revenue}</strong></div>
-        <div style="display:flex; justify-content:space-between;"><span>已售食材配方成本:</span> <strong>${cogs}</strong></div>
-        <div style="display:flex; justify-content:space-between;"><span>食材報廢耗損金額:</span> <strong>${scrap}</strong></div>
-        <div style="display:flex; justify-content:space-between; margin-top:8px; border-top:1px solid #000; padding-top:8px;">
-          <span>估算營業毛利:</span> <strong>${profit}</strong>
-        </div>
-      </div>
-      <hr style="border-top:1px dashed #000; margin:24px 0;">
-      <p style="font-size:12px; margin-top:40px; text-align:left;">確認人簽名_________________</p>
-    </div>
-  `;
-  document.getElementById('printContainer').innerHTML = printContent;
-  window.print();
-}
-
 function resetCheckoutPanel() {
   document.getElementById('checkoutOrderTitle').textContent = '請由左側點選一筆訂單進行結帳';
   document.getElementById('checkoutTotalAmount').textContent = '$0';
