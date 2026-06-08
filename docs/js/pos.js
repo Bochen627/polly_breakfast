@@ -254,7 +254,7 @@ async function selectOrderForCheckout(orderId) {
       row.style.alignItems = 'flex-start';
       row.innerHTML = `
         <div style="flex:1;">
-          <div>${item.dish_name} ? ${item.quantity}</div>
+          <div>${item.dish_name} x ${item.quantity}</div>
           ${custHtml}
         </div>
         <span style="font-weight:600; width:60px; text-align:right;">$${(parseFloat(item.price_at_order) * item.quantity).toFixed(0)}</span>
