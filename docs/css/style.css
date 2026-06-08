@@ -203,7 +203,7 @@ body.print-mode-report .charts-grid {
   display: flex;
   flex-direction: column;
 }
-body.print-mode-report .chart-container {
+.chart-container {
   position: relative;
   height: 300px;
   width: 100%;

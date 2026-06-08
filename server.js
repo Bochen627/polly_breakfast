@@ -164,6 +164,57 @@ app.post('/api/scraps', async (req, res) => {
     await conn.query('UPDATE ingredients SET stock_quantity = stock_quantity - ? WHERE ingredient_id = ?', [req.body.quantity, req.body.ingredientId]);
     await conn.commit();
     res.json({ success: true });
+
+// Edit Scrap
+app.put('/api/scraps/:id', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const scrapId = req.params.id;
+    const { quantity, reason } = req.body;
+    
+    // Get old scrap
+    const [oldRows] = await conn.query('SELECT * FROM scrap_records WHERE scrap_id = ?', [scrapId]);
+    if (oldRows.length === 0) throw new Error('Scrap not found');
+    const oldScrap = oldRows[0];
+    
+    const diff = oldScrap.quantity - parseFloat(quantity);
+    
+    await conn.query('UPDATE scrap_records SET quantity = ?, reason = ? WHERE scrap_id = ?', [quantity, reason, scrapId]);
+    await conn.query('UPDATE ingredients SET stock_quantity = stock_quantity + ? WHERE ingredient_id = ?', [diff, oldScrap.ingredient_id]);
+    
+    await conn.commit();
+    res.json({ success: true });
+  } catch (err) {
+    await conn.rollback();
+    res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
+  }
+});
+
+// Delete Scrap
+app.delete('/api/scraps/:id', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const scrapId = req.params.id;
+    const [oldRows] = await conn.query('SELECT * FROM scrap_records WHERE scrap_id = ?', [scrapId]);
+    if (oldRows.length > 0) {
+      const oldScrap = oldRows[0];
+      await conn.query('DELETE FROM scrap_records WHERE scrap_id = ?', [scrapId]);
+      await conn.query('UPDATE ingredients SET stock_quantity = stock_quantity + ? WHERE ingredient_id = ?', [oldScrap.quantity, oldScrap.ingredient_id]);
+    }
+    await conn.commit();
+    res.json({ success: true });
+  } catch (err) {
+    await conn.rollback();
+    res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
+  }
+});
+
   } catch (err) {
     await conn.rollback();
     res.status(500).json({ error: err.message });

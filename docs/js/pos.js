@@ -703,6 +703,10 @@ function renderScrapTable(scraps) {
       <td>${s.unit}</td>
       <td style="color:var(--danger); font-weight:700;">$${cost.toFixed(1)}</td>
       <td style="font-size:0.85rem; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${s.reason}">${s.reason}</td>
+      <td>
+        <button class="btn btn-outline" style="padding: 2px 6px; font-size: 12px; margin-right:4px;" onclick="editScrap(${s.scrap_id}, ${s.quantity}, '${s.reason || ''}')">編輯</button>
+        <button class="btn btn-outline" style="padding: 2px 6px; font-size: 12px; border-color:var(--danger); color:var(--danger);" onclick="deleteScrap(${s.scrap_id})">刪除</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
@@ -1404,4 +1408,48 @@ function printBusinessReport() {
   document.body.classList.add('print-mode-report');
   window.print();
   document.body.classList.remove('print-mode-report');
+}
+
+async function editScrap(scrapId, oldQty, oldReason) {
+  const qtyStr = prompt('請輸入新的報廢數量:', oldQty);
+  if (qtyStr === null) return;
+  const quantity = parseFloat(qtyStr);
+  if (isNaN(quantity) || quantity <= 0) {
+    alert('無效的數量');
+    return;
+  }
+  const reason = prompt('請輸入新的原因說明:', oldReason) || '';
+  
+  try {
+    const res = await fetch(API_BASE_URL + '/api/scraps/' + scrapId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity, reason })
+    });
+    const result = await res.json();
+    if (result.success) {
+      loadInventoryData(); // reload
+    } else {
+      alert('更新失敗: ' + result.error);
+    }
+  } catch (e) {
+    console.error(e);
+    alert('更新發生錯誤');
+  }
+}
+
+async function deleteScrap(scrapId) {
+  if (!confirm('確定要刪除這筆報廢紀錄嗎？(庫存將會加回)')) return;
+  try {
+    const res = await fetch(API_BASE_URL + '/api/scraps/' + scrapId, { method: 'DELETE' });
+    const result = await res.json();
+    if (result.success) {
+      loadInventoryData();
+    } else {
+      alert('刪除失敗: ' + result.error);
+    }
+  } catch (e) {
+    console.error(e);
+    alert('刪除發生錯誤');
+  }
 }

@@ -125,9 +125,9 @@
 
         <!-- Inner Tabs for Inventory -->
         <div style="display:flex; gap:16px; margin-bottom:16px;">
-          <button id="tab-stock-btn" class="category-tab active" onclick="switchInventoryTab('stock')">現有庫存</button>
-          <button id="tab-purchase-btn" class="category-tab" onclick="switchInventoryTab('purchase')">進貨紀錄</button>
-          <button id="tab-scrap-btn" class="category-tab" onclick="switchInventoryTab('scrap')">報廢紀錄</button>
+          <button id="tab-stock-btn" class="btn btn-primary" onclick="switchInventoryTab('stock')">現有庫存</button>
+          <button id="tab-purchase-btn" class="btn btn-outline" onclick="switchInventoryTab('purchase')">進貨紀錄</button>
+          <button id="tab-scrap-btn" class="btn btn-outline" onclick="switchInventoryTab('scrap')">報廢紀錄</button>
         </div>
 
         <!-- Tab 2.1: Stock Table -->
@@ -179,6 +179,7 @@
                 <th>單位</th>
                 <th>損失成本 (估算)</th>
                 <th>原因說明</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody id="scrapLogsTableBody">
