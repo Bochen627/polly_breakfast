@@ -704,7 +704,7 @@ function renderScrapTable(scraps) {
       <td style="color:var(--danger); font-weight:700;">$${cost.toFixed(1)}</td>
       <td style="font-size:0.85rem; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${s.reason}">${s.reason}</td>
       <td>
-        <button class="btn btn-outline" style="padding: 2px 6px; font-size: 12px; margin-right:4px;" onclick="editScrap(${s.scrap_id}, ${s.quantity}, '${s.reason || ''}')">編輯</button>
+        <button class="btn btn-outline" style="padding: 2px 6px; font-size: 12px; margin-right:4px;" onclick="editScrap(${s.scrap_id}, ${s.quantity}, '${s.reason || ''}', '${s.ingredient_name}')">編輯</button>
         <button class="btn btn-outline" style="padding: 2px 6px; font-size: 12px; border-color:var(--danger); color:var(--danger);" onclick="deleteScrap(${s.scrap_id})">刪除</button>
       </td>
     `;
@@ -1442,6 +1442,22 @@ async function deleteScrap(scrapId) {
   if (!confirm('確定要刪除這筆報廢紀錄嗎？(庫存將會加回)')) return;
   try {
     const res = await fetch(API_BASE_URL + '/api/scraps/' + scrapId, { method: 'DELETE' });
+    const result = await res.json();
+    if (result.success) {
+      loadInventoryData();
+    } else {
+      alert('刪除失敗: ' + result.error);
+    }
+  } catch (e) {
+    console.error(e);
+    alert('刪除發生錯誤');
+  }
+}
+
+async function deletePurchase(purchaseId) {
+  if (!confirm('確定要刪除這筆進貨紀錄嗎？(庫存將會扣除)')) return;
+  try {
+    const res = await fetch(API_BASE_URL + '/api/purchases/' + purchaseId, { method: 'DELETE' });
     const result = await res.json();
     if (result.success) {
       loadInventoryData();
