@@ -911,7 +911,7 @@ function renderMenuTable() {
       <td><span class="badge badge-primary">${dish.category_name}</span></td>
       <td style="font-weight:700;">${dish.dish_name}</td>
       <td style="font-weight:700; color:var(--primary-dark); cursor:pointer;" title="點擊修改價格" onclick="editDishPrice(${dish.dish_id}, ${dish.price})">
-        $${parseFloat(dish.price).toFixed(0)} <span style="font-size:0.75rem; font-weight:normal; color:var(--txt-muted);">??/span>
+        $${parseFloat(dish.price).toFixed(0)}
       </td>
       <td>${switchHtml}</td>
       <td>
@@ -1397,4 +1397,11 @@ function renderScrapLossChart(data) {
       }
     }
   });
+}
+
+
+function printBusinessReport() {
+  document.body.classList.add('print-mode-report');
+  window.print();
+  document.body.classList.remove('print-mode-report');
 }

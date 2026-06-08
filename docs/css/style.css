@@ -189,7 +189,7 @@ body {
 
 
 /* Chart Container Fix for Responsive Layout */
-.charts-grid {
+body.print-mode-report .charts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 20px;
@@ -203,7 +203,7 @@ body {
   display: flex;
   flex-direction: column;
 }
-.chart-container {
+body.print-mode-report .chart-container {
   position: relative;
   height: 300px;
   width: 100%;
@@ -212,13 +212,13 @@ body {
 
 /* Print Styles for Business Analysis */
 @media print {
-  body * {
+  body.print-mode-report * {
     visibility: hidden;
   }
-  #panel-reports, #panel-reports * {
+  body.print-mode-report #panel-reports, body.print-mode-report #panel-reports * {
     visibility: visible;
   }
-  #panel-reports {
+  body.print-mode-report #panel-reports {
     position: absolute;
     left: 0;
     top: 0;
@@ -226,14 +226,14 @@ body {
     margin: 0;
     padding: 0;
   }
-  .sidebar, .topbar, .report-filters, button {
+  body.print-mode-report .sidebar, body.print-mode-report .topbar, body.print-mode-report .report-filters, body.print-mode-report button {
     display: none !important;
   }
-  .charts-grid {
+  body.print-mode-report .charts-grid {
     grid-template-columns: 1fr 1fr;
     gap: 10px;
   }
-  .chart-container {
+  body.print-mode-report .chart-container {
     height: 250px;
   }
 }
