@@ -1172,11 +1172,49 @@ async function deleteRecipeRowItem(ingredientId) {
 // ----------------------------------------------------
 // Panel 4: Reports & Charts Methods
 // ----------------------------------------------------
+
+function initDateFilters() {
+  const today = new Date();
+  const past = new Date(today);
+  past.setDate(past.getDate() - 14);
+
+  const startInput = document.getElementById('reportStartDate');
+  const endInput = document.getElementById('reportEndDate');
+  
+  if (startInput && !startInput.value) {
+    startInput.value = past.toISOString().split('T')[0];
+  }
+  if (endInput && !endInput.value) {
+    endInput.value = today.toISOString().split('T')[0];
+  }
+}
+
 async function loadReportsData() {
+  initDateFilters();
   try {
     const startDate = document.getElementById('reportStartDate')?.value || '';
     const endDate = document.getElementById('reportEndDate')?.value || '';
     const queryStr = (startDate && endDate) ? `?startDate=${startDate}&endDate=${endDate}` : '';
+
+    const reportsPageTitle = document.getElementById('reportsPageTitle');
+    const dailyRevenueTitle = document.getElementById('dailyRevenueTitle');
+    
+    let dateRangeText = '';
+    if (startDate && endDate) {
+      const sDate = new Date(startDate);
+      const eDate = new Date(endDate);
+      const sStr = (sDate.getMonth()+1) + '/' + sDate.getDate();
+      const eStr = (eDate.getMonth()+1) + '/' + eDate.getDate();
+      if (startDate === endDate) {
+        dateRangeText = `(${sStr})`;
+      } else {
+        dateRangeText = `(${sStr}~${eStr})`;
+      }
+    }
+
+    if (reportsPageTitle) reportsPageTitle.textContent = `營業數據分析 ${dateRangeText}`;
+    if (dailyRevenueTitle) dailyRevenueTitle.textContent = `每日營業額趨勢 ${dateRangeText}`;
+
 
     // If interval is exactly 1 day, hide daily revenue chart to avoid overlap with hourly trend
     const dailyChartCard = document.getElementById('dailyRevenueChart').closest('.chart-card');

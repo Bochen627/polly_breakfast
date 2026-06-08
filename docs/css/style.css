@@ -186,3 +186,54 @@ body {
   background-color: var(--primary-light);
   color: var(--primary-dark);
 }
+
+
+/* Chart Container Fix for Responsive Layout */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+.chart-card {
+  background: var(--bg-card);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+.chart-container {
+  position: relative;
+  height: 300px;
+  width: 100%;
+  flex-grow: 1;
+}
+
+/* Print Styles for Business Analysis */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #panel-reports, #panel-reports * {
+    visibility: visible;
+  }
+  #panel-reports {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  .sidebar, .topbar, .report-filters, button {
+    display: none !important;
+  }
+  .charts-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .chart-container {
+    height: 250px;
+  }
+}

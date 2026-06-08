@@ -217,12 +217,13 @@
       <!-- ================= Panel 4: Reports Dashboard ================= -->
       <section id="panel-reports" class="panel-section">
         <div class="content-header">
-          <h2 class="content-title">營業數據分析</h2>
+          <h2 class="content-title" id="reportsPageTitle">營業數據分析</h2>
           <div class="report-filters" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
             <input type="date" id="reportStartDate" class="form-control" style="width: 150px; padding: 4px 8px;">
             <span>~</span>
             <input type="date" id="reportEndDate" class="form-control" style="width: 150px; padding: 4px 8px;">
             <button class="btn btn-secondary" onclick="loadReportsData()">查詢區間</button>
+            <button class="btn btn-outline" onclick="window.print()" style="margin-left:auto; border:1px solid #ccc; background:#fff;">列印營業分析</button>
           </div>
           <button class="btn btn-primary" onclick="printShiftReport()">列印今日交班日結</button>
         </div>
@@ -250,7 +251,7 @@
         <!-- Chart.js Charts Grid -->
         <div class="charts-grid">
           <div class="chart-card">
-            <div class="chart-title">每日營業額趨勢 (14日內)</div>
+            <div class="chart-title" id="dailyRevenueTitle">每日營業額趨勢 (14日內)</div>
             <div class="chart-container">
               <canvas id="dailyRevenueChart"></canvas>
             </div>
