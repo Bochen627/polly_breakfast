@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>波里早餐店 - POS 電腦收銀管理系統</title>
+  <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="./css/pos.css">
+</head>
+<body>
+
+  <div class="pos-container">
+    
+    <!-- 1. Left Sidebar Navigation -->
+    <aside class="pos-sidebar">
+      <div class="sidebar-header">
+        <h1 class="sidebar-brand">波里早餐店</h1>
+        <div class="sidebar-subtitle">POS 收銀與庫存管理系統</div>
+      </div>
+      <nav class="sidebar-menu">
+        <button class="menu-item active" onclick="switchPanel('pos')">
+          <svg class="menu-item-icon" viewBox="0 0 24 24"><path d="M22 9V7h-2V5c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2v-2h-2V9h2zm-4 10H4V5h14v14zM6 13h5v2H6zm0-4h8v2H6z"/></svg>
+          <span>點餐結帳 POS</span>
+        </button>
+        <button class="menu-item" onclick="switchPanel('inventory')">
+          <svg class="menu-item-icon" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 14H4v-4h8v4zm0-6H4V8h8v4zm8 6h-6v-4h6v4zm0-6h-6V8h6v4z"/></svg>
+          <span>庫存管理 Inventory</span>
+        </button>
+        <button class="menu-item" onclick="switchPanel('menu')">
+          <svg class="menu-item-icon" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg>
+          <span>菜單與配方 Menu</span>
+        </button>
+        <button class="menu-item" onclick="switchPanel('reports')">
+          <svg class="menu-item-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+          <span>營業分析 Reports</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- 2. Right Content Area -->
+    <main class="pos-content">
+      
+      <!-- ================= Panel 1: POS Cashier ================= -->
+      <section id="panel-pos" class="panel-section active">
+        <div class="content-header">
+          <h2 class="content-title">點餐結帳 POS</h2>
+          <button class="btn btn-primary" onclick="openWalkinOrderModal()">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            新增臨櫃訂單
+          </button>
+        </div>
+        
+        <div class="pos-cashier-layout">
+          <!-- Pending / History Orders -->
+          <div class="orders-column">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <h3 style="font-size:1.1rem; font-weight:700; color:var(--txt-muted);">訂單管理</h3>
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-primary" style="padding:4px 8px; font-size:0.85rem;" id="tabPendingOrders" onclick="switchOrderTab('pending')">待付款</button>
+                <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.85rem;" id="tabHistoryOrders" onclick="switchOrderTab('history')">今日歷史</button>
+              </div>
+            </div>
+            <div class="order-grid-list" id="pendingOrdersList">
+              <!-- Pending order cards from customers -->
+            </div>
+          </div>
+          
+          <!-- Checkout Panel -->
+          <div class="checkout-panel">
+            <div class="checkout-header">
+              <span>結帳收銀機</span>
+              <span class="badge badge-primary" id="checkoutOrderTitle">無選取訂單</span>
+            </div>
+            
+            <div class="checkout-items" id="checkoutItemsList">
+              <div style="text-align:center; padding:40px 0; color:var(--txt-muted); font-size:0.9rem;">
+                請從左側點選一筆訂單進行結帳
+              </div>
+            </div>
+            
+            <div class="checkout-totals">
+              <div class="total-row">
+                <span class="total-label">合計金額</span>
+                <span class="total-value" id="checkoutTotalAmount">$0</span>
+              </div>
+            </div>
+            
+            <div class="cash-register">
+              <div class="register-input-group">
+                <label for="cashReceived">實收金額</label>
+                <input type="number" id="cashReceived" class="register-input" value="0" min="0" oninput="calculateChange()">
+              </div>
+              <div class="change-row">
+                <span>找零金額</span>
+                <span class="change-value" id="cashChange">$0</span>
+              </div>
+            </div>
+            
+            <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+              <button class="btn btn-danger" id="cancelOrderBtn" style="flex:1;" disabled onclick="cancelSelectedOrder()">取消訂單</button>
+              <button class="btn btn-primary" id="checkoutBtn" style="flex:2;" disabled onclick="checkoutSelectedOrder()">確認結帳 (扣庫存)</button>
+              <button class="btn btn-danger" id="refundOrderBtn" style="flex:2; display:none;" onclick="refundSelectedOrder()">作廢退款 (加回庫存)</button>
+            </div>
+            <div style="display: flex; gap: 12px;">
+              <button class="btn btn-secondary" id="printReceiptBtn" style="flex:1;" disabled onclick="printReceipt()">列印收據明細</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= Panel 2: Inventory Management ================= -->
+      <section id="panel-inventory" class="panel-section">
+        <div class="content-header">
+          <h2 class="content-title">庫存管理 Inventory</h2>
+          <div class="action-bar">
+            <input type="text" id="inventorySearch" class="search-input" placeholder="搜尋食材名稱..." oninput="filterInventoryTable()">
+            <button class="btn btn-secondary" onclick="openPurchaseModal()">
+              進貨單登錄 (進貨)
+            </button>
+            <button class="btn btn-danger" onclick="openScrapModal()">
+              報廢登記
+            </button>
+          </div>
+        </div>
+
+        <!-- Inner Tabs for Inventory -->
+        <div style="display:flex; gap:16px; margin-bottom:16px;">
+          <button id="tab-stock-btn" class="category-tab active" onclick="switchInventoryTab('stock')">現有庫存</button>
+          <button id="tab-purchase-btn" class="category-tab" onclick="switchInventoryTab('purchase')">進貨紀錄</button>
+          <button id="tab-scrap-btn" class="category-tab" onclick="switchInventoryTab('scrap')">報廢紀錄</button>
+        </div>
+
+        <!-- Tab 2.1: Stock Table -->
+        <div id="subpanel-stock" class="pos-table-container">
+          <table class="pos-table">
+            <thead>
+              <tr>
+                <th>編號</th>
+                <th>食材/原物料名稱</th>
+                <th>目前庫存量</th>
+                <th>單位</th>
+                <th>進貨單價 (最新)</th>
+                <th>安全狀態</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody">
+              <!-- Loaded via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Tab 2.2: Purchase Logs Table -->
+        <div id="subpanel-purchase" class="pos-table-container" style="display:none;">
+          <table class="pos-table">
+            <thead>
+              <tr>
+                <th>進貨單ID</th>
+                <th>進貨日期</th>
+                <th>供應商</th>
+                <th>進貨品項明細</th>
+                <th>總進貨金額</th>
+              </tr>
+            </thead>
+            <tbody id="purchaseLogsTableBody">
+              <!-- Loaded via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Tab 2.3: Scrap Logs Table -->
+        <div id="subpanel-scrap" class="pos-table-container" style="display:none;">
+          <table class="pos-table">
+            <thead>
+              <tr>
+                <th>報廢ID</th>
+                <th>報廢日期</th>
+                <th>食材名稱</th>
+                <th>報廢數量</th>
+                <th>單位</th>
+                <th>損失成本 (估算)</th>
+                <th>原因說明</th>
+              </tr>
+            </thead>
+            <tbody id="scrapLogsTableBody">
+              <!-- Loaded via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= Panel 3: Menu & Recipe ================= -->
+      <section id="panel-menu" class="panel-section">
+        <div class="content-header">
+          <h2 class="content-title">菜單與配方設定</h2>
+          <button class="btn btn-primary" onclick="openCreateDishModal()">新增餐點</button>
+        </div>
+        
+        <div class="pos-table-container">
+          <table class="pos-table">
+            <thead>
+              <tr>
+                <th>編號</th>
+                <th>類別</th>
+                <th>餐點名稱</th>
+                <th>餐點售價</th>
+                <th>是否上架</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="menuTableBody">
+              <!-- Loaded via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= Panel 4: Reports Dashboard ================= -->
+      <section id="panel-reports" class="panel-section">
+        <div class="content-header">
+          <h2 class="content-title">營業數據分析</h2>
+          <div class="report-filters" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <input type="date" id="reportStartDate" class="form-control" style="width: 150px; padding: 4px 8px;">
+            <span>~</span>
+            <input type="date" id="reportEndDate" class="form-control" style="width: 150px; padding: 4px 8px;">
+            <button class="btn btn-secondary" onclick="loadReportsData()">查詢區間</button>
+          </div>
+          <button class="btn btn-primary" onclick="printShiftReport()">列印今日交班日結</button>
+        </div>
+        
+        <!-- Summary Cards -->
+        <div class="reports-grid">
+          <div class="stat-card">
+            <span class="stat-label">累積營收總額</span>
+            <div class="stat-value" style="color:var(--primary-dark);" id="statTotalRevenue">$0</div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">已售食材配方成本 (COGS)</span>
+            <div class="stat-value" style="color:var(--txt-muted);" id="statTotalCogs">$0</div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">食材報廢耗損金額</span>
+            <div class="stat-value" style="color:var(--danger);" id="statTotalScrap">$0</div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">估算營業毛利</span>
+            <div class="stat-value" style="color:var(--secondary);" id="statProfit">$0</div>
+          </div>
+        </div>
+
+        <!-- Chart.js Charts Grid -->
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">每日營業額趨勢 (14日內)</div>
+            <div class="chart-container">
+              <canvas id="dailyRevenueChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">熱門商品排行 (Top 10)</div>
+            <div class="chart-container">
+              <canvas id="topSellingChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">營業尖峰時段分析 (時段訂單)</div>
+            <div class="chart-container">
+              <canvas id="hourlyTrendChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">食材耗損與成本分析 (報廢金額排行)</div>
+            <div class="chart-container">
+              <canvas id="scrapLossChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- ================= MODALS SECTION ================= -->
+
+  <!-- Modal A: Create Walk-in Order -->
+  <div class="modal-overlay" id="walkinOrderModal">
+    <div class="modal-box modal-lg">
+      <h2 class="modal-title">新增臨櫃點餐</h2>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="walkinTable">桌號/類別</label>
+          <select id="walkinTable" class="form-control">
+            <option value="臨櫃1">臨櫃1</option>
+            <option value="臨櫃2">臨櫃2</option>
+            <option value="1桌">1桌</option>
+            <option value="2桌">2桌</option>
+            <option value="3桌">3桌</option>
+            <option value="4桌">4桌</option>
+            <option value="外帶">外帶</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>快速分類</label>
+          <select id="walkinCategoryFilter" class="form-control" onchange="filterWalkinDishes()">
+            <!-- Loaded via JS -->
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-pos-item-grid" id="walkinDishesGrid">
+        <!-- Dish buttons loaded via JS -->
+      </div>
+
+      <div style="border-top:1px solid var(--border); padding-top:16px; margin-bottom:16px;">
+        <h3 style="font-size:1rem; margin-bottom:10px; text-align:left;">已選點餐項目:</h3>
+        <div id="walkinCartList" style="max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+          <!-- Items listed here -->
+        </div>
+      </div>
+
+      <div class="btn-group-right">
+        <button class="btn btn-secondary" onclick="closeWalkinOrderModal()">取消</button>
+        <button class="btn btn-primary" onclick="submitWalkinOrder()">送出訂單</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal B: Submit Purchase Invoice (進貨) -->
+  <div class="modal-overlay" id="purchaseModal">
+    <div class="modal-box modal-lg">
+      <h2 class="modal-title">進貨單登錄</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="purchaseDate">進貨日期</label>
+          <input type="date" id="purchaseDate" class="form-control">
+        </div>
+        <div class="form-group">
+          <label for="purchaseSupplier">供應商</label>
+          <input type="text" id="purchaseSupplier" class="form-control" placeholder="例如: 大漢食材行">
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--border); padding-top:16px; margin-bottom:16px; text-align:left;">
+        <label>新增進貨原料項目</label>
+        <div class="form-row" style="grid-template-columns: 2fr 1fr 1fr 60px; gap:8px; align-items:flex-end;">
+          <div>
+            <select id="purchaseSelectIngredient" class="form-control">
+              <!-- Loaded via JS -->
+            </select>
+          </div>
+          <div>
+            <input type="number" id="purchaseInputQty" class="form-control" placeholder="數量" min="0.01" step="0.01">
+          </div>
+          <div>
+            <input type="number" id="purchaseInputCost" class="form-control" placeholder="單價/元" min="0" step="0.01">
+          </div>
+          <button class="btn btn-secondary" onclick="addPurchaseRowItem()" style="padding:10px; width:100%;">新增</button>
+        </div>
+      </div>
+
+      <div style="max-height:180px; overflow-y:auto; margin-bottom:16px;">
+        <table class="pos-table">
+          <thead>
+            <tr>
+              <th>食材名稱</th>
+              <th>進貨數量</th>
+              <th>進貨單價</th>
+              <th>小計</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="purchaseInputItemsBody">
+            <!-- Dynamically added rows -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="btn-group-right">
+        <button class="btn btn-secondary" onclick="closePurchaseModal()">取消</button>
+        <button class="btn btn-primary" onclick="submitPurchaseInvoice()">送出存檔</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal C: Submit Scrap Record (報廢) -->
+  <div class="modal-overlay" id="scrapModal">
+    <div class="modal-box">
+      <h2 class="modal-title">登記食材報廢</h2>
+      <div class="form-group">
+        <label for="scrapDate">報廢日期</label>
+        <input type="date" id="scrapDate" class="form-control">
+      </div>
+      <div class="form-group">
+        <label for="scrapSelectIngredient">報廢原物料</label>
+        <select id="scrapSelectIngredient" class="form-control">
+          <!-- Loaded via JS -->
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="scrapQty">報廢數量</label>
+          <input type="number" id="scrapQty" class="form-control" placeholder="數量" min="0.01" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>食材單位</label>
+          <input type="text" id="scrapUnitLabel" class="form-control" readonly placeholder="單位" style="background:#eee;">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="scrapReason">報廢原因</label>
+        <input type="text" id="scrapReason" class="form-control" placeholder="例如: 過期、變質、掉落地上">
+      </div>
+
+      <div class="btn-group-right">
+        <button class="btn btn-secondary" onclick="closeScrapModal()">取消</button>
+        <button class="btn btn-primary" onclick="submitScrap()">送出登記</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal D: Edit Recipe Formula (配方設定) -->
+  <div class="modal-overlay" id="recipeModal">
+    <div class="modal-box modal-lg">
+      <h2 class="modal-title" id="recipeModalTitle">餐點配方設定</h2>
+      
+      <div style="border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:16px; text-align:left;">
+        <label>新增配方原料需求</label>
+        <div class="form-row" style="grid-template-columns: 2fr 1fr 80px; gap:8px; align-items:flex-end;">
+          <div>
+            <select id="recipeSelectIngredient" class="form-control">
+              <!-- Loaded via JS -->
+            </select>
+          </div>
+          <div>
+            <input type="number" id="recipeInputQty" class="form-control" placeholder="需求量" min="0.01" step="0.01">
+          </div>
+          <button class="btn btn-secondary" onclick="addRecipeItem()" style="padding:10px; width:100%;">新增原料</button>
+        </div>
+      </div>
+
+      <div style="max-height:200px; overflow-y:auto; margin-bottom:16px;">
+        <table class="pos-table">
+          <thead>
+            <tr>
+              <th>原料名稱</th>
+              <th>所需數量</th>
+              <th>單位</th>
+              <th>最新估算成本</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="recipeItemsBody">
+            <!-- Loaded via JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="btn-group-right">
+        <button class="btn btn-primary" onclick="closeRecipeModal()">關閉視窗</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal E: Create New Dish (新增餐點) -->
+  <div class="modal-overlay" id="createDishModal">
+    <div class="modal-box">
+      <h2 class="modal-title">新增餐點</h2>
+      <div class="form-group">
+        <label for="createDishCategory">餐點分類</label>
+        <select id="createDishCategory" class="form-control">
+          <!-- Loaded via JS -->
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="createDishName">餐點名稱</label>
+        <input type="text" id="createDishName" class="form-control" placeholder="例如: 鮪魚起司蛋吐司">
+      </div>
+      <div class="form-group">
+        <label for="createDishPrice">售價 (元)</label>
+        <input type="number" id="createDishPrice" class="form-control" placeholder="價格" min="0" step="1">
+      </div>
+
+      <div class="btn-group-right">
+        <button class="btn btn-secondary" onclick="closeCreateDishModal()">取消</button>
+        <button class="btn btn-primary" onclick="submitCreateDish()">新增餐點</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal F: Walk-in Customization -->
+  <div class="modal-overlay" id="walkinCustomizationModal">
+    <div class="modal-box">
+      <h2 class="modal-title" id="walkinCustomizationTitle">客製化選項</h2>
+      
+      <div class="customization-group">
+        <h3 style="font-size:1rem; margin-bottom:8px;">加料區</h3>
+        <label style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <span><input type="checkbox" class="walkin-cust-cb" value="加蛋" data-price="15"> 加蛋 (+$15)</span>
+        </label>
+        <label style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <span><input type="checkbox" class="walkin-cust-cb" value="加起司" data-price="15"> 加起司 (+$15)</span>
+        </label>
+      </div>
+
+      <div class="customization-group" style="margin-top:16px;">
+        <h3 style="font-size:1rem; margin-bottom:8px;">備註 / 飲品客製</h3>
+        <label style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <span><input type="checkbox" class="walkin-cust-cb" value="切邊" data-price="0"> 吐司切邊</span>
+        </label>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <select id="walkinIce" class="form-control" style="flex:1">
+            <option value="">冰塊不適用</option>
+            <option value="正常冰">正常冰</option>
+            <option value="少冰">少冰</option>
+            <option value="去冰">去冰</option>
+            <option value="溫">溫</option>
+            <option value="熱">熱</option>
+          </select>
+          <select id="walkinSugar" class="form-control" style="flex:1">
+            <option value="">甜度不適用</option>
+            <option value="正常糖">正常糖</option>
+            <option value="半糖">半糖</option>
+            <option value="微糖">微糖</option>
+            <option value="無糖">無糖</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px; margin-top:24px;">
+        <button class="btn btn-secondary" style="flex:1;" onclick="closeWalkinCustomizationModal()">取消</button>
+        <button class="btn btn-primary" style="flex:2;" onclick="confirmWalkinCustomization()">加入訂單</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="printContainer" class="print-only"></div>
+
+  <!-- Charts Visuals CDN JS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="./config.js"></script>
+  <script src="./js/pos.js"></script>
+</body>
+</html>

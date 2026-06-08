@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>波里早餐店 - 線上自助點餐</title>
+  <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="./css/order.css">
+</head>
+<body>
+
+  <div class="order-container">
+    
+    <!-- 1. Header Area -->
+    <header class="order-header">
+      <div class="brand-section">
+        <h1 class="brand-title">波里早餐店</h1>
+        <span class="table-badge" id="tableBadge">
+          <span id="tableNumberText">請選擇桌號</span>
+        </span>
+      </div>
+      <button class="cart-toggle-btn" id="cartToggleBtn">
+        <svg class="cart-icon-svg" viewBox="0 0 24 24">
+          <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.06 1.4-2.54h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
+        </svg>
+        <span class="cart-count" id="cartBadgeCount" style="display: none;">0</span>
+      </button>
+    </header>
+
+    <!-- 2. Category Navigation -->
+    <nav class="categories-nav" id="categoriesNav">
+      <!-- Tabs populated via JS -->
+    </nav>
+
+    <!-- 3. Dishes Menu Viewport -->
+    <main class="dishes-content" id="dishesContent">
+      <!-- Dish lists grouped by category populated via JS -->
+    </main>
+
+    <!-- 4. Floating Cart Summary Bar (appears when items are in cart) -->
+    <div class="cart-floating-bar glass" id="cartFloatingBar" style="display: none;">
+      <div class="cart-bar-info">
+        <div class="cart-bar-total">
+          <span class="cart-bar-label">應付小計</span>
+          <span class="cart-bar-price" id="cartBarPrice">$0</span>
+        </div>
+      </div>
+      <button class="btn btn-primary">
+        <span>查看購物車</span>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </button>
+    </div>
+
+    <!-- 5. Cart Sliding Drawer -->
+    <div class="cart-drawer-overlay" id="drawerOverlay"></div>
+    <div class="cart-drawer" id="cartDrawer">
+      <div class="drawer-header">
+        <h2 class="drawer-title">已選餐點明細</h2>
+        <button class="drawer-close" id="drawerClose">&times;</button>
+      </div>
+      <div class="drawer-items" id="drawerItems">
+        <!-- Cart Items list -->
+      </div>
+      <div class="drawer-footer">
+        <div class="drawer-summary-row">
+          <span class="drawer-summary-label">合計金額</span>
+          <span class="drawer-summary-total" id="drawerSummaryTotal">$0</span>
+        </div>
+        <button class="btn btn-primary" id="submitOrderBtn" style="width: 100%; height: 48px;" disabled>
+          確認送出訂單
+        </button>
+      </div>
+    </div>
+
+    <!-- 6. Table Selection Dialog -->
+    <div class="modal-overlay" id="tableModalOverlay">
+      <div class="modal-box">
+        <h2 class="modal-title">您好，請先選擇用餐桌號</h2>
+        <div class="table-grid" id="tableGrid">
+          <!-- Populated via JS -->
+        </div>
+        <div style="font-size: 0.8rem; color: var(--txt-muted); margin-top: 10px;">
+          * 可隨時點擊頂部桌號進行更改
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. Customization Dialog -->
+    <div class="modal-overlay" id="customizationModalOverlay">
+      <div class="modal-box">
+        <h2 class="modal-title" id="customizationModalTitle">客製化選項</h2>
+        
+        <div class="customization-group">
+          <h3 style="font-size:1rem; margin-bottom:8px;">加料區</h3>
+          <label style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span><input type="checkbox" class="cust-checkbox" value="加蛋" data-price="15"> 加蛋 (+$15)</span>
+          </label>
+          <label style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span><input type="checkbox" class="cust-checkbox" value="加起司" data-price="15"> 加起司 (+$15)</span>
+          </label>
+        </div>
+
+        <div class="customization-group" style="margin-top:16px;">
+          <h3 style="font-size:1rem; margin-bottom:8px;">備註</h3>
+          <label style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span><input type="checkbox" class="cust-checkbox" value="切邊" data-price="0"> 吐司切邊</span>
+          </label>
+        </div>
+
+        <div class="customization-group" style="margin-top:16px;">
+          <h3 style="font-size:1rem; margin-bottom:8px;">飲品冰塊 (限飲品)</h3>
+          <select id="custIce" class="form-control" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+            <option value="">不適用</option>
+            <option value="正常冰">正常冰</option>
+            <option value="少冰">少冰</option>
+            <option value="去冰">去冰</option>
+            <option value="溫">溫</option>
+            <option value="熱">熱</option>
+          </select>
+        </div>
+
+        <div class="customization-group" style="margin-top:16px;">
+          <h3 style="font-size:1rem; margin-bottom:8px;">飲品甜度 (限飲品)</h3>
+          <select id="custSugar" class="form-control" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+            <option value="">不適用</option>
+            <option value="正常糖">正常糖</option>
+            <option value="半糖">半糖</option>
+            <option value="微糖">微糖</option>
+            <option value="無糖">無糖</option>
+          </select>
+        </div>
+
+        <div style="display:flex; gap:12px; margin-top:24px;">
+          <button class="btn btn-secondary" style="flex:1;" onclick="closeCustomizationModal()">取消</button>
+          <button class="btn btn-primary" style="flex:2;" onclick="confirmCustomization()">加入購物車</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./js/order.js"></script>
+</body>
+</html>
