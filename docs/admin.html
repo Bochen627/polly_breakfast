@@ -55,10 +55,10 @@
           <div class="orders-column">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
               <h3 style="font-size:1.1rem; font-weight:700; color:var(--txt-muted);">訂單管理</h3>
-              <div style="display:flex; gap:8px; align-items:center;">
-                <input type="date" id="historyOrderDate" class="form-control" style="padding:2px 4px; font-size:0.85rem; display:none;" onchange="fetchOrdersList()">
-                <button class="btn btn-primary" style="padding:4px 8px; font-size:0.85rem;" id="tabPendingOrders" onclick="switchOrderTab('pending')">待付款</button>
-                <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.85rem;" id="tabHistoryOrders" onclick="switchOrderTab('history')">歷史訂單</button>
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap: nowrap;">
+                <input type="date" id="historyOrderDate" class="form-control" style="padding:2px 4px; font-size:0.85rem; display:none; max-width:140px;" onchange="fetchOrdersList()">
+                <button class="btn btn-primary" style="padding:4px 8px; font-size:0.85rem; white-space:nowrap; flex-shrink:0;" id="tabPendingOrders" onclick="switchOrderTab('pending')">待付款</button>
+                <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.85rem; white-space:nowrap; flex-shrink:0;" id="tabHistoryOrders" onclick="switchOrderTab('history')">歷史訂單</button>
               </div>
             </div>
             <div class="order-grid-list" id="pendingOrdersList">
