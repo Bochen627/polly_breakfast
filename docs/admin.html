@@ -99,6 +99,7 @@
             
             <div style="display: flex; gap: 12px; margin-bottom: 12px;">
               <button class="btn btn-danger" id="cancelOrderBtn" style="flex:1;" disabled onclick="cancelSelectedOrder()">取消訂單</button>
+              <button class="btn btn-secondary" id="editOrderBtn" style="flex:1;" disabled onclick="openEditOrderModal()">修改訂單</button>
               <button class="btn btn-primary" id="checkoutBtn" style="flex:2;" disabled onclick="checkoutSelectedOrder()">確認結帳 (扣庫存)</button>
               <button class="btn btn-danger" id="refundOrderBtn" style="flex:2; display:none;" onclick="refundSelectedOrder()">作廢退款 (加回庫存)</button>
             </div>
@@ -121,6 +122,9 @@
             <button class="btn btn-danger" onclick="openScrapModal()">
               報廢登記
             </button>
+            <button class="btn btn-primary" onclick="openStocktakeModal()" style="margin-left:8px;">
+              盤點登記
+            </button>
           </div>
         </div>
 
@@ -129,6 +133,7 @@
           <button id="tab-stock-btn" class="btn btn-primary" onclick="switchInventoryTab('stock')">現有庫存</button>
           <button id="tab-purchase-btn" class="btn btn-outline" onclick="switchInventoryTab('purchase')">進貨紀錄</button>
           <button id="tab-scrap-btn" class="btn btn-outline" onclick="switchInventoryTab('scrap')">報廢紀錄</button>
+          <button id="tab-check-btn" class="btn btn-outline" onclick="switchInventoryTab('check')">盤點紀錄</button>
         </div>
 
         <!-- Tab 2.1: Stock Table -->
@@ -186,6 +191,26 @@
               </tr>
             </thead>
             <tbody id="scrapLogsTableBody">
+              <!-- Loaded via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Tab 2.4: Stocktake Logs Table -->
+        <div id="subpanel-check" class="pos-table-container" style="display:none;">
+          <table class="pos-table">
+            <thead>
+              <tr>
+                <th>盤點ID</th>
+                <th>盤點時間</th>
+                <th>食材名稱</th>
+                <th>原系統數量</th>
+                <th>盤點後數量</th>
+                <th>單位</th>
+                <th>備註</th>
+              </tr>
+            </thead>
+            <tbody id="checkLogsTableBody">
               <!-- Loaded via JS -->
             </tbody>
           </table>
@@ -289,7 +314,7 @@
   <!-- Modal A: Create Walk-in Order -->
   <div class="modal-overlay" id="walkinOrderModal">
     <div class="modal-box modal-lg">
-      <h2 class="modal-title">新增臨櫃點餐</h2>
+      <h2 class="modal-title" id="walkinOrderTitle">新增臨櫃訂單</h2>
       
       <div class="form-row">
         <div class="form-group">
@@ -325,7 +350,7 @@
 
       <div class="btn-group-right">
         <button class="btn btn-secondary" onclick="closeWalkinOrderModal()">取消</button>
-        <button class="btn btn-primary" onclick="submitWalkinOrder()">送出訂單</button>
+        <button class="btn btn-primary" id="walkinOrderSubmitBtn" onclick="submitWalkinOrder()">送出訂單</button>
       </div>
     </div>
   </div>
@@ -568,6 +593,41 @@
       <div style="display:flex; gap:12px; margin-top:24px;">
         <button class="btn btn-secondary" style="flex:1;" onclick="closeWalkinCustomizationModal()">取消</button>
         <button class="btn btn-primary" style="flex:2;" onclick="confirmWalkinCustomization()">加入訂單</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal D: Submit Stocktake -->
+  <div class="modal-overlay" id="stocktakeModal">
+    <div class="modal-box">
+      <h2 class="modal-title">盤點庫存登記</h2>
+      
+      <div class="form-group">
+        <label for="stocktakeSelectIngredient">選擇盤點食材</label>
+        <select id="stocktakeSelectIngredient" class="form-control" onchange="updateStocktakeOldQty()">
+          <!-- Loaded via JS -->
+        </select>
+      </div>
+      
+      <div class="form-row" style="grid-template-columns: 1fr 1fr; gap:8px;">
+        <div class="form-group">
+          <label>目前系統數量</label>
+          <input type="text" id="stocktakeOldQty" class="form-control" readonly style="background-color:#f5f5f5;">
+        </div>
+        <div class="form-group">
+          <label for="stocktakeNewQty">盤點後實際數量</label>
+          <input type="number" id="stocktakeNewQty" class="form-control" placeholder="請輸入實際數量" min="0" step="any">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="stocktakeNotes">備註 (選填)</label>
+        <input type="text" id="stocktakeNotes" class="form-control" placeholder="例如：漏記耗損、點錯...">
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+        <button class="btn btn-outline" onclick="closeStocktakeModal()">取消</button>
+        <button class="btn btn-primary" onclick="submitStocktake()">確認送出 (強制覆蓋庫存)</button>
       </div>
     </div>
   </div>

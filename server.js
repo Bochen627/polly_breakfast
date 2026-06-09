@@ -260,6 +260,36 @@ app.delete('/api/scraps/:id', async (req, res) => {
 });
 
 // ==========================================
+// --- 盤點紀錄 API ---
+app.get('/api/inventory-checks', async (req, res) => {
+  const [rows] = await pool.query('SELECT ic.*, i.ingredient_name, i.unit FROM inventory_checks ic JOIN ingredients i ON ic.ingredient_id = i.ingredient_id ORDER BY ic.check_date DESC, ic.check_id DESC');
+  res.json(rows);
+});
+
+app.post('/api/inventory-checks', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const { ingredientId, actualQuantity, notes } = req.body;
+    
+    const [ings] = await conn.query('SELECT stock_quantity FROM ingredients WHERE ingredient_id = ? FOR UPDATE', [ingredientId]);
+    if (ings.length === 0) throw new Error('找不到該食材');
+    const oldQuantity = ings[0].stock_quantity;
+
+    await conn.query('INSERT INTO inventory_checks (ingredient_id, old_quantity, new_quantity, notes) VALUES (?, ?, ?, ?)', [ingredientId, oldQuantity, actualQuantity, notes || null]);
+    await conn.query('UPDATE ingredients SET stock_quantity = ? WHERE ingredient_id = ?', [actualQuantity, ingredientId]);
+
+    await conn.commit();
+    res.json({ success: true });
+  } catch (err) {
+    await conn.rollback();
+    res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
+  }
+});
+
+// ==========================================
 // 5. 訂單結帳 API
 // ==========================================
 // 取得訂單列表
@@ -364,6 +394,57 @@ app.post('/api/orders', async (req, res) => {
 
     await conn.commit();
     res.json({ success: true, orderId: orderRes.insertId });
+  } catch (err) {
+    await conn.rollback();
+    res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
+  }
+});
+
+// 修改訂單 (僅限 Pending 狀態)
+app.put('/api/orders/:id', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const orderId = req.params.id;
+    const { items } = req.body;
+
+    const [order] = await conn.query('SELECT status FROM orders WHERE order_id = ? FOR UPDATE', [orderId]);
+    if (order.length === 0) throw new Error('找不到該訂單');
+    if (order[0].status === 'Paid') throw new Error('已結帳訂單無法修改');
+
+    let totalAmount = 0;
+    // 計算總金額並準備明細資料
+    for (const item of items) {
+      let optPrice = 0;
+      let custStr = null;
+      if (item.customizations) {
+        const custArr = typeof item.customizations === 'string' ? JSON.parse(item.customizations) : item.customizations;
+        custArr.forEach(c => optPrice += parseFloat(c.price || 0));
+        custStr = typeof item.customizations === 'string' ? item.customizations : JSON.stringify(item.customizations);
+      }
+      const [dish] = await conn.query('SELECT price FROM dishes WHERE dish_id = ?', [item.dish_id]);
+      if (dish.length === 0) throw new Error(`找不到餐點 ID: ${item.dish_id}`);
+      const price = parseFloat(dish[0].price) + optPrice;
+      totalAmount += price * item.quantity;
+      item.price_at_order = price;
+      item.customizations_str = custStr;
+    }
+
+    // 更新訂單總額
+    await conn.query('UPDATE orders SET total_amount = ? WHERE order_id = ?', [totalAmount, orderId]);
+
+    // 刪除舊明細
+    await conn.query('DELETE FROM order_items WHERE order_id = ?', [orderId]);
+
+    // 寫入新明細
+    for (const item of items) {
+      await conn.query('INSERT INTO order_items (order_id, dish_id, quantity, price_at_order, customizations) VALUES (?, ?, ?, ?, ?)', [orderId, item.dish_id, item.quantity, item.price_at_order, item.customizations_str]);
+    }
+
+    await conn.commit();
+    res.json({ success: true });
   } catch (err) {
     await conn.rollback();
     res.status(500).json({ error: err.message });

@@ -9,7 +9,8 @@ let posState = {
   pendingOrders: [],
   selectedOrder: null,
   walkinCart: {}, // cartKey -> item
-  purchaseInputItems: [] // temp items for purchase entry
+  purchaseInputItems: [], // temp items for purchase entry
+  editingOrderId: null
 };
 
 // Chart.js instances to allow destroying and recreating
@@ -97,6 +98,15 @@ function populateDropdowns() {
     });
   }
 
+  // Ingredient select for stocktake modal
+  const stocktakeSelect = document.getElementById('stocktakeSelectIngredient');
+  if (stocktakeSelect) {
+    stocktakeSelect.innerHTML = '<option value="">請選擇...</option>';
+    posState.ingredients.forEach(ing => {
+      stocktakeSelect.innerHTML += `<option value="${ing.ingredient_id}">${ing.ingredient_name}</option>`;
+    });
+  }
+
   // Category select for create dish modal
   const createDishCat = document.getElementById('createDishCategory');
   if (createDishCat) {
@@ -156,11 +166,15 @@ function switchInventoryTab(tabId) {
   document.getElementById('tab-stock-btn').className = tabId === 'stock' ? 'btn btn-primary' : 'btn btn-outline';
   document.getElementById('tab-purchase-btn').className = tabId === 'purchase' ? 'btn btn-primary' : 'btn btn-outline';
   document.getElementById('tab-scrap-btn').className = tabId === 'scrap' ? 'btn btn-primary' : 'btn btn-outline';
+  const checkBtn = document.getElementById('tab-check-btn');
+  if (checkBtn) checkBtn.className = tabId === 'check' ? 'btn btn-primary' : 'btn btn-outline';
 
   // Hide/Show tables
   document.getElementById('subpanel-stock').style.display = tabId === 'stock' ? 'block' : 'none';
   document.getElementById('subpanel-purchase').style.display = tabId === 'purchase' ? 'block' : 'none';
   document.getElementById('subpanel-scrap').style.display = tabId === 'scrap' ? 'block' : 'none';
+  const checkSubpanel = document.getElementById('subpanel-check');
+  if (checkSubpanel) checkSubpanel.style.display = tabId === 'check' ? 'block' : 'none';
 
   loadInventoryData();
 }
@@ -296,12 +310,19 @@ async function selectOrderForCheckout(orderId) {
     if (orderDetails.status === 'Paid') {
       document.getElementById('checkoutBtn').style.display = 'none';
       document.getElementById('cancelOrderBtn').style.display = 'none';
+      const editBtn = document.getElementById('editOrderBtn');
+      if(editBtn) editBtn.style.display = 'none';
       document.getElementById('refundOrderBtn').style.display = 'block';
       document.getElementById('refundOrderBtn').disabled = false;
       document.getElementById('cashReceived').disabled = true;
     } else {
       document.getElementById('checkoutBtn').style.display = 'block';
       document.getElementById('cancelOrderBtn').style.display = 'block';
+      const editBtn = document.getElementById('editOrderBtn');
+      if(editBtn) {
+        editBtn.style.display = 'block';
+        editBtn.disabled = false;
+      }
       document.getElementById('refundOrderBtn').style.display = 'none';
       document.getElementById('cashReceived').disabled = false;
       document.getElementById('cancelOrderBtn').disabled = false;
@@ -450,12 +471,20 @@ function resetCheckoutPanel() {
   checkoutBtn.disabled = true;
   checkoutBtn.textContent = '確認結帳 (扣庫存)';
   document.getElementById('cancelOrderBtn').disabled = true;
+  const editBtn = document.getElementById('editOrderBtn');
+  if(editBtn) editBtn.disabled = true;
 }
 
 // Walk-in Order Modal Operations
 function openWalkinOrderModal() {
+  posState.editingOrderId = null;
+  const titleEl = document.getElementById('walkinOrderTitle');
+  if(titleEl) titleEl.textContent = '新增臨櫃訂單';
+  const submitBtn = document.getElementById('walkinOrderSubmitBtn');
+  if(submitBtn) submitBtn.textContent = '送出訂單';
+
   posState.walkinCart = {};
-  document.getElementById('walkinCartList').innerHTML = '<div style="color:var(--txt-muted); font-size:0.9rem; text-align:center;">尚未點選任何餐點</div>';
+  document.getElementById('walkinCartList').innerHTML = '<div style="color:var(--txt-muted); font-size:0.9rem; text-align:center;">目前無餐點</div>';
   document.getElementById('walkinOrderModal').classList.add('active');
   
   // Load dishes in modal
@@ -589,6 +618,10 @@ function renderWalkinCart() {
 }
 
 async function submitWalkinOrder() {
+  if (posState.editingOrderId) {
+    return submitEditOrder();
+  }
+
   const items = Object.values(posState.walkinCart).map(item => ({
     dish_id: item.id,
     quantity: item.quantity,
@@ -619,10 +652,91 @@ async function submitWalkinOrder() {
       switchOrderTab('pending'); // Auto load newly created walk-in order
       selectOrderForCheckout(result.orderId); 
     } else {
-      alert(`送出失敗: ${result.error}`);
+      alert(`錯誤: ${result.error}`);
     }
   } catch (error) {
     console.error('Error submitting walkin order:', error);
+  }
+}
+
+// 修改訂單功能
+function openEditOrderModal() {
+  if (!posState.selectedOrder) return;
+  posState.editingOrderId = posState.selectedOrder.order_id;
+  
+  const titleEl = document.getElementById('walkinOrderTitle');
+  if(titleEl) titleEl.textContent = `修改訂單 #${posState.selectedOrder.order_id}`;
+  const submitBtn = document.getElementById('walkinOrderSubmitBtn');
+  if(submitBtn) submitBtn.textContent = '儲存修改';
+
+  posState.walkinCart = {};
+  posState.selectedOrder.items.forEach(item => {
+    let customizations = [];
+    if (item.customizations) {
+      try {
+        customizations = typeof item.customizations === 'string' ? JSON.parse(item.customizations) : item.customizations;
+      } catch(e) {}
+    }
+    const custStr = JSON.stringify(customizations || []);
+    const cartKey = `${item.dish_id}_${custStr}`;
+    
+    posState.walkinCart[cartKey] = {
+      id: item.dish_id,
+      cartKey: cartKey,
+      name: item.dish_name,
+      basePrice: parseFloat(item.price_at_order) - customizations.reduce((sum, c) => sum + parseFloat(c.price||0), 0),
+      price: parseFloat(item.price_at_order),
+      quantity: item.quantity,
+      customizations: customizations
+    };
+  });
+
+  document.getElementById('walkinOrderModal').classList.add('active');
+  filterWalkinDishes();
+  renderWalkinCart();
+}
+
+async function submitEditOrder() {
+  const items = Object.values(posState.walkinCart).map(item => ({
+    dish_id: item.id,
+    quantity: item.quantity,
+    customizations: item.customizations
+  }));
+
+  if (items.length === 0) {
+    alert('修改後的訂單不能為空。若要取消訂單，請使用「取消訂單」功能。');
+    return;
+  }
+
+  const submitBtn = document.getElementById('walkinOrderSubmitBtn');
+  if(submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = '儲存中...';
+  }
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/orders/${posState.editingOrderId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: items })
+    });
+
+    const result = await res.json();
+    if (result.success) {
+      closeWalkinOrderModal();
+      fetchOrdersList(); // reload orders
+      selectOrderForCheckout(posState.editingOrderId); // reload checkout panel
+    } else {
+      alert(`修改失敗: ${result.error}`);
+    }
+  } catch (error) {
+    console.error('Error modifying order:', error);
+    alert('發生網路錯誤');
+  } finally {
+    if(submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '儲存修改';
+    }
   }
 }
 
@@ -644,6 +758,10 @@ async function loadInventoryData() {
       const res = await fetch(API_BASE_URL + '/api/scraps');
       const scraps = await res.json();
       renderScrapTable(scraps);
+    } else if (posState.currentInventoryTab === 'check') {
+      const res = await fetch(API_BASE_URL + '/api/inventory-checks');
+      const checks = await res.json();
+      renderCheckTable(checks);
     }
   } catch (error) {
     console.error('Error loading inventory data:', error);
@@ -948,6 +1066,88 @@ async function submitScrap() {
     }
   } catch (error) {
     console.error('Error submitting scrap record:', error);
+  }
+}
+
+// --- Stocktake (Inventory Check) ---
+function renderCheckTable(checks) {
+  const tbody = document.getElementById('checkLogsTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (checks.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--txt-muted);">無盤點紀錄</td></tr>';
+    return;
+  }
+
+  checks.forEach(c => {
+    const tr = document.createElement('tr');
+    const dateStr = new Date(c.check_date).toLocaleString('zh-TW');
+    tr.innerHTML = `
+      <td>#${c.check_id}</td>
+      <td>${dateStr}</td>
+      <td>${c.ingredient_name}</td>
+      <td>${c.old_quantity}</td>
+      <td style="color:var(--primary); font-weight:bold;">${c.new_quantity}</td>
+      <td>${c.unit}</td>
+      <td>${c.notes || '-'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function openStocktakeModal() {
+  document.getElementById('stocktakeSelectIngredient').value = '';
+  document.getElementById('stocktakeOldQty').value = '';
+  document.getElementById('stocktakeNewQty').value = '';
+  document.getElementById('stocktakeNotes').value = '';
+  document.getElementById('stocktakeModal').classList.add('active');
+}
+
+function closeStocktakeModal() {
+  document.getElementById('stocktakeModal').classList.remove('active');
+}
+
+function updateStocktakeOldQty() {
+  const ingId = document.getElementById('stocktakeSelectIngredient').value;
+  if (!ingId) {
+    document.getElementById('stocktakeOldQty').value = '';
+    return;
+  }
+  const ing = posState.ingredients.find(i => i.ingredient_id == ingId);
+  if (ing) {
+    document.getElementById('stocktakeOldQty').value = ing.stock_quantity + ' ' + ing.unit;
+  }
+}
+
+async function submitStocktake() {
+  const ingredientId = document.getElementById('stocktakeSelectIngredient').value;
+  const actualQuantity = document.getElementById('stocktakeNewQty').value;
+  const notes = document.getElementById('stocktakeNotes').value;
+
+  if (!ingredientId || actualQuantity === '') {
+    alert('請選擇食材並輸入實際數量');
+    return;
+  }
+
+  try {
+    const res = await fetch(API_BASE_URL + '/api/inventory-checks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ingredientId, actualQuantity, notes })
+    });
+    if (!res.ok) throw new Error('盤點紀錄送出失敗');
+    
+    closeStocktakeModal();
+    // reload data
+    if (posState.currentInventoryTab === 'check') {
+      loadInventoryData(); // reload table
+    } else {
+      switchInventoryTab('check');
+    }
+  } catch (err) {
+    console.error(err);
+    alert(err.message);
   }
 }
 
