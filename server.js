@@ -636,6 +636,8 @@ app.get('/api/reports/ingredient-consumption', async (req, res) => {
   `;
   const [rows] = await pool.query(sql, d.params);
   res.json(rows);
+});
+
 // 編輯指定配方項目
 app.put('/api/dishes/:dishId/recipe/:ingredientId', async (req, res) => {
   try {
