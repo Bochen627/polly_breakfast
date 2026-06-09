@@ -1482,8 +1482,11 @@ async function loadReportsData() {
     // Always display daily revenue chart, but change title if interval is exactly 1 day
     const dailyChartCard = document.getElementById('dailyRevenueChart').closest('.chart-card');
     dailyChartCard.style.display = 'block';
-    if (startDate && endDate && startDate === endDate) {
+    const isSingleDay = (startDate && endDate && startDate === endDate);
+    if (isSingleDay) {
       if (dailyRevenueTitle) dailyRevenueTitle.textContent = `當日營業額趨勢 ${dateRangeText}`;
+    } else {
+      if (dailyRevenueTitle) dailyRevenueTitle.textContent = `每日營業額趨勢 ${dateRangeText}`;
     }
 
     // 1. Load Summary Metrics
@@ -1494,20 +1497,24 @@ async function loadReportsData() {
     document.getElementById('statMonthlyPurchase').textContent = '$' + summaryData.monthlyPurchase.toLocaleString();
     document.getElementById('statTotalScrap').textContent = '$' + summaryData.totalScrapLoss.toLocaleString();
 
-    // 2. Daily revenue chart
-    const dailyRes = await fetch(API_BASE_URL + '/api/reports/daily-revenue' + queryStr);
-    const dailyData = await dailyRes.json();
-    renderDailyRevenueChart(dailyData);
-
-    // 3. Top selling chart
-    const topRes = await fetch(API_BASE_URL + '/api/reports/top-selling' + queryStr);
-    const topData = await topRes.json();
-    renderTopSellingChart(topData);
-
-    // 4. Hourly trend chart
+    // 2. Hourly trend chart (Fetch first so we can use it for single day daily chart)
     const hourlyRes = await fetch(API_BASE_URL + '/api/reports/hourly-trend' + queryStr);
     const hourlyData = await hourlyRes.json();
     renderHourlyTrendChart(hourlyData);
+
+    // 3. Daily revenue chart
+    const dailyRes = await fetch(API_BASE_URL + '/api/reports/daily-revenue' + queryStr);
+    const dailyData = await dailyRes.json();
+    if (isSingleDay) {
+      renderDailyRevenueChart(hourlyData, true);
+    } else {
+      renderDailyRevenueChart(dailyData, false);
+    }
+
+    // 4. Top selling chart
+    const topRes = await fetch(API_BASE_URL + '/api/reports/top-selling' + queryStr);
+    const topData = await topRes.json();
+    renderTopSellingChart(topData);
 
     // 5. Scrap loss chart
     const scrapRes = await fetch(API_BASE_URL + '/api/reports/ingredient-consumption' + queryStr);
@@ -1520,12 +1527,29 @@ async function loadReportsData() {
 }
 
 // Chart.js render configurations
-function renderDailyRevenueChart(data) {
+function renderDailyRevenueChart(data, isHourly = false) {
   if (charts.dailyRevenue) charts.dailyRevenue.destroy();
   
-  const labels = data.map(item => new Date(item.date).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })).reverse();
-  const revenues = data.map(item => parseFloat(item.revenue)).reverse();
-  const grossProfits = data.map(item => parseFloat(item.gross_profit || 0)).reverse();
+  let labels, revenues, grossProfits;
+  if (isHourly) {
+    const hourMap = {};
+    data.forEach(item => hourMap[item.hour] = item);
+    labels = []; revenues = []; grossProfits = [];
+    for (let h = 5; h <= 13; h++) {
+      labels.push(`${h}:00`);
+      if (hourMap[h]) {
+        revenues.push(parseFloat(hourMap[h].revenue));
+        grossProfits.push(parseFloat(hourMap[h].gross_profit || 0));
+      } else {
+        revenues.push(0);
+        grossProfits.push(0);
+      }
+    }
+  } else {
+    labels = data.map(item => new Date(item.date).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })).reverse();
+    revenues = data.map(item => parseFloat(item.revenue)).reverse();
+    grossProfits = data.map(item => parseFloat(item.gross_profit || 0)).reverse();
+  }
 
   const ctx = document.getElementById('dailyRevenueChart').getContext('2d');
   charts.dailyRevenue = new Chart(ctx, {

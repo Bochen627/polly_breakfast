@@ -597,7 +597,24 @@ app.get('/api/reports/top-selling', async (req, res) => {
 app.get('/api/reports/hourly-trend', async (req, res) => {
   const d = getDateParams(req);
   const [rows] = await pool.query("SELECT HOUR(DATE_ADD(created_at, INTERVAL 8 HOUR)) AS hour, SUM(total_amount) AS revenue, COUNT(order_id) AS orders_count FROM orders WHERE status = 'Paid'" + d.oFilterNoAlias + " GROUP BY HOUR(DATE_ADD(created_at, INTERVAL 8 HOUR)) ORDER BY HOUR(DATE_ADD(created_at, INTERVAL 8 HOUR)) ASC", d.params);
-  res.json(rows);
+  
+  const [cogsRows] = await pool.query("SELECT HOUR(DATE_ADD(o.created_at, INTERVAL 8 HOUR)) AS hour, SUM(oi.quantity * ri.quantity_required * i.cost_per_unit) AS cogs FROM order_items oi JOIN recipe_items ri ON oi.dish_id = ri.dish_id JOIN ingredients i ON ri.ingredient_id = i.ingredient_id JOIN orders o ON oi.order_id = o.order_id WHERE o.status = 'Paid'" + d.oFilter + " GROUP BY HOUR(DATE_ADD(o.created_at, INTERVAL 8 HOUR))", d.params);
+  
+  const cogsMap = {};
+  cogsRows.forEach(r => cogsMap[r.hour] = parseFloat(r.cogs || 0));
+
+  const result = rows.map(r => {
+    const rev = parseFloat(r.revenue);
+    const cogs = cogsMap[r.hour] || 0;
+    return {
+      hour: r.hour,
+      revenue: rev,
+      orders_count: r.orders_count,
+      gross_profit: rev - cogs
+    };
+  });
+  
+  res.json(result);
 });
 
 // 食材報廢耗損分析 (圖表用)
