@@ -931,8 +931,14 @@ function openEditPurchaseModal(id) {
     document.getElementById('purchaseDate').value = '';
   }
   document.getElementById('purchaseSupplier').value = po.supplier || '';
-  // clone items
-  posState.purchaseInputItems = po.items.map(i => ({...i}));
+  // clone items with proper parsing
+  posState.purchaseInputItems = po.items.map(i => ({
+    ingredient_id: i.ingredient_id,
+    name: i.ingredient_name,
+    unit: i.unit,
+    quantity: parseFloat(i.quantity),
+    cost_per_unit: parseFloat(i.cost_per_unit)
+  }));
   renderPurchaseInputItems();
   document.getElementById('purchaseModal').classList.add('active');
 }
