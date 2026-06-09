@@ -353,13 +353,13 @@ async function checkoutSelectedOrder() {
     } else {
       alert(`結帳失敗: ${result.error}`);
       checkoutBtn.disabled = false;
-      checkoutBtn.textContent = '確認結帳';
+      checkoutBtn.textContent = '確認結帳 (扣庫存)';
     }
   } catch (error) {
     console.error('Error during checkout:', error);
     alert('伺服器連線失敗');
     checkoutBtn.disabled = false;
-    checkoutBtn.textContent = '確認結帳';
+    checkoutBtn.textContent = '確認結帳 (扣庫存)';
   }
 }
 
@@ -446,7 +446,9 @@ function resetCheckoutPanel() {
   document.getElementById('cashReceived').value = '0';
   document.getElementById('cashChange').textContent = '$0';
   document.getElementById('cashChange').style.color = 'var(--txt-main)';
-  document.getElementById('checkoutBtn').disabled = true;
+  const checkoutBtn = document.getElementById('checkoutBtn');
+  checkoutBtn.disabled = true;
+  checkoutBtn.textContent = '確認結帳 (扣庫存)';
   document.getElementById('cancelOrderBtn').disabled = true;
 }
 
