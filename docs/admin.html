@@ -100,8 +100,10 @@
             <div style="display: flex; gap: 12px; margin-bottom: 12px;">
               <button class="btn btn-danger" id="cancelOrderBtn" style="flex:1;" disabled onclick="cancelSelectedOrder()">取消訂單</button>
               <button class="btn btn-secondary" id="editOrderBtn" style="flex:1;" disabled onclick="openEditOrderModal()">修改訂單</button>
-              <button class="btn btn-primary" id="checkoutBtn" style="flex:2;" disabled onclick="checkoutSelectedOrder()">確認結帳 (扣庫存)</button>
-              <button class="btn btn-danger" id="refundOrderBtn" style="flex:2; display:none;" onclick="refundSelectedOrder()">作廢退款 (加回庫存)</button>
+            </div>
+            <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+              <button class="btn btn-primary" id="checkoutBtn" style="flex:1;" disabled onclick="checkoutSelectedOrder()">確認結帳 (扣庫存)</button>
+              <button class="btn btn-danger" id="refundOrderBtn" style="flex:1; display:none;" onclick="refundSelectedOrder()">作廢退款 (加回庫存)</button>
             </div>
             <div style="display: flex; gap: 12px;">
               <button class="btn btn-secondary" id="printReceiptBtn" style="flex:1;" disabled onclick="printReceipt()">列印收據明細</button>
