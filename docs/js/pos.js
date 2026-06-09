@@ -1297,7 +1297,7 @@ async function loadReportsData() {
     renderHourlyTrendChart(hourlyData);
 
     // 5. Scrap loss chart
-    const scrapRes = await fetch(API_BASE_URL + '/api/reports/scrap-loss' + queryStr);
+    const scrapRes = await fetch(API_BASE_URL + '/api/reports/ingredient-consumption' + queryStr);
     const scrapData = await scrapRes.json();
     renderScrapLossChart(scrapData);
 
@@ -1484,7 +1484,7 @@ function renderScrapLossChart(data) {
     data: {
       labels: labels,
       datasets: [{
-        label: '耗損金額 ($)',
+        label: '消耗金額 ($)',
         data: values,
         backgroundColor: 'rgba(239, 68, 68, 0.85)',
         hoverBackgroundColor: '#dc2626',

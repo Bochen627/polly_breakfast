@@ -503,9 +503,24 @@ app.get('/api/reports/hourly-trend', async (req, res) => {
 });
 
 // 食材報廢耗損分析 (圖表用)
-app.get('/api/reports/scrap-loss', async (req, res) => {
+app.get('/api/reports/ingredient-consumption', async (req, res) => {
   const d = getDateParams(req);
-  const [rows] = await pool.query("SELECT i.ingredient_name, SUM(sr.quantity) AS scrapped_quantity, i.unit, SUM(sr.quantity * i.cost_per_unit) AS loss_cost FROM scrap_records sr JOIN ingredients i ON sr.ingredient_id = i.ingredient_id" + d.scrFilter + " GROUP BY i.ingredient_id, i.ingredient_name, i.unit ORDER BY loss_cost DESC", d.params);
+  const sql = `
+    SELECT 
+      i.ingredient_name, 
+      SUM(oi.quantity * ri.quantity_required) AS consumed_quantity, 
+      i.unit, 
+      SUM(oi.quantity * ri.quantity_required * i.cost_per_unit) AS loss_cost 
+    FROM order_items oi 
+    JOIN recipe_items ri ON oi.dish_id = ri.dish_id 
+    JOIN ingredients i ON ri.ingredient_id = i.ingredient_id 
+    JOIN orders o ON oi.order_id = o.order_id 
+    WHERE o.status = 'Paid' ${d.oFilter} 
+    GROUP BY i.ingredient_id, i.ingredient_name, i.unit 
+    ORDER BY loss_cost DESC 
+    LIMIT 10
+  `;
+  const [rows] = await pool.query(sql, d.params);
   res.json(rows);
 });
 
