@@ -297,6 +297,15 @@ app.post('/api/inventory-checks', async (req, res) => {
   }
 });
 
+app.delete('/api/inventory-checks/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM inventory_checks WHERE check_id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ==========================================
 // 5. 訂單結帳 API
 // ==========================================

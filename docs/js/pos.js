@@ -1076,7 +1076,7 @@ function renderCheckTable(checks) {
   tbody.innerHTML = '';
 
   if (checks.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--txt-muted);">無盤點紀錄</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--txt-muted);">無盤點紀錄</td></tr>';
     return;
   }
 
@@ -1091,9 +1091,23 @@ function renderCheckTable(checks) {
       <td style="color:var(--primary); font-weight:bold;">${c.new_quantity}</td>
       <td>${c.unit}</td>
       <td>${c.notes || '-'}</td>
+      <td>
+        <button class="btn btn-danger" onclick="deleteCheckLog(${c.check_id})" style="padding: 2px 8px; font-size: 0.8rem;">刪除</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
+}
+
+async function deleteCheckLog(id) {
+  if (!confirm('確定要刪除這筆盤點紀錄嗎？\n(注意：刪除紀錄不會改變目前的庫存數字，若庫存數量錯誤請新增一筆正確的盤點即可)')) return;
+  try {
+    const res = await fetch(API_BASE_URL + '/api/inventory-checks/' + id, { method: 'DELETE' });
+    if (!res.ok) throw new Error('刪除失敗');
+    loadInventoryData();
+  } catch (error) {
+    alert('刪除失敗: ' + error.message);
+  }
 }
 
 function openStocktakeModal() {
@@ -1465,12 +1479,11 @@ async function loadReportsData() {
     if (dailyRevenueTitle) dailyRevenueTitle.textContent = `每日營業額趨勢 ${dateRangeText}`;
 
 
-    // If interval is exactly 1 day, hide daily revenue chart to avoid overlap with hourly trend
+    // Always display daily revenue chart, but change title if interval is exactly 1 day
     const dailyChartCard = document.getElementById('dailyRevenueChart').closest('.chart-card');
+    dailyChartCard.style.display = 'block';
     if (startDate && endDate && startDate === endDate) {
-      dailyChartCard.style.display = 'none';
-    } else {
-      dailyChartCard.style.display = 'block';
+      if (dailyRevenueTitle) dailyRevenueTitle.textContent = `當日營業額趨勢 ${dateRangeText}`;
     }
 
     // 1. Load Summary Metrics
@@ -1602,8 +1615,8 @@ function renderHourlyTrendChart(data) {
   const showHours = [];
   const showRevenues = [];
   const showOrders = [];
-  // Focus on 5am to 2pm for breakfast shop
-  for (let h = 5; h <= 15; h++) {
+  // Focus on 5am to 1pm (13:00) for breakfast shop
+  for (let h = 5; h <= 13; h++) {
     showHours.push(`${h}:00`);
     showRevenues.push(revenues[h]);
     showOrders.push(orders[h]);
