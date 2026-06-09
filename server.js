@@ -20,6 +20,14 @@ app.use(express.json());
 // 提供靜態檔案資料夾 (本地測試用，改名為 docs 以配合 GitHub Pages)
 app.use(express.static(path.join(__dirname, 'docs')));
 
+// 加入全域未處理錯誤捕捉，避免資料庫斷線時整個 Node.js 崩潰
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
 // ==========================================
 // 資料庫連線設定 (建立連線池提高效能)
 // 這裡會讀取 .env 裡面的設定，如果之後要換成雲端資料庫，只要改 .env 就好
