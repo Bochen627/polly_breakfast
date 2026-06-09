@@ -917,11 +917,19 @@ function openPurchaseModal() {
 }
 
 function openEditPurchaseModal(id) {
-  const po = posState.currentPurchases.find(p => p.purchase_id === id);
-  if (!po) return;
+  const po = posState.currentPurchases.find(p => p.purchase_id == id);
+  if (!po) {
+    alert('找不到對應的進貨紀錄');
+    return;
+  }
   posState.editingPurchaseId = id;
-  const dt = new Date(po.purchase_date);
-  document.getElementById('purchaseDate').value = dt.toISOString().split('T')[0];
+  try {
+    const dt = new Date(po.purchase_date);
+    document.getElementById('purchaseDate').value = dt.toISOString().split('T')[0];
+  } catch (err) {
+    console.error('Date parsing error', err);
+    document.getElementById('purchaseDate').value = '';
+  }
   document.getElementById('purchaseSupplier').value = po.supplier || '';
   // clone items
   posState.purchaseInputItems = po.items.map(i => ({...i}));
