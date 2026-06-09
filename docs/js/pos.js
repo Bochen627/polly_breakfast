@@ -10,7 +10,9 @@ let posState = {
   selectedOrder: null,
   walkinCart: {}, // cartKey -> item
   purchaseInputItems: [], // temp items for purchase entry
-  editingOrderId: null
+  currentPurchases: [],
+  editingOrderId: null,
+  editingPurchaseId: null
 };
 
 // Chart.js instances to allow destroying and recreating
@@ -394,7 +396,7 @@ async function cancelSelectedOrder() {
     if (result.success) {
       posState.selectedOrder = null;
       resetCheckoutPanel();
-      fetchPendingOrders();
+      fetchOrdersList();
     } else {
       alert(`取消失敗: ${result.error}`);
     }
@@ -825,6 +827,7 @@ async function updateSafeStock(ingredientId, newValue) {
 }
 
 function renderPurchaseTable(purchases) {
+  posState.currentPurchases = purchases;
   const tbody = document.getElementById('purchaseLogsTableBody');
   tbody.innerHTML = '';
 
@@ -850,6 +853,7 @@ function renderPurchaseTable(purchases) {
       <td style="font-size:0.85rem; line-height:1.4;">${details}</td>
       <td style="font-weight:800; color:var(--primary-dark);">$${parseFloat(po.total_cost).toFixed(0)}</td>
       <td>
+        <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 12px; margin-right: 4px;" onclick="openEditPurchaseModal(${po.purchase_id})">編輯</button>
         <button class="btn btn-outline" style="padding: 2px 6px; font-size: 12px; border-color:var(--danger); color:var(--danger);" onclick="deletePurchase(${po.purchase_id})">刪除</button>
       </td>
     `;
@@ -905,11 +909,28 @@ function filterInventoryTable() {
 // Purchase Invoice Input Form modal operations
 function openPurchaseModal() {
   posState.purchaseInputItems = [];
+  posState.editingPurchaseId = null;
+  document.getElementById('purchaseDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('purchaseSupplier').value = '';
+  renderPurchaseInputItems();
+  document.getElementById('purchaseModal').classList.add('active');
+}
+
+function openEditPurchaseModal(id) {
+  const po = posState.currentPurchases.find(p => p.purchase_id === id);
+  if (!po) return;
+  posState.editingPurchaseId = id;
+  const dt = new Date(po.purchase_date);
+  document.getElementById('purchaseDate').value = dt.toISOString().split('T')[0];
+  document.getElementById('purchaseSupplier').value = po.supplier || '';
+  // clone items
+  posState.purchaseInputItems = po.items.map(i => ({...i}));
   renderPurchaseInputItems();
   document.getElementById('purchaseModal').classList.add('active');
 }
 
 function closePurchaseModal() {
+  posState.editingPurchaseId = null;
   document.getElementById('purchaseModal').classList.remove('active');
 }
 
@@ -997,8 +1018,13 @@ async function submitPurchaseInvoice() {
   }
 
   try {
-    const res = await fetch(API_BASE_URL + '/api/purchases', {
-      method: 'POST',
+    const url = posState.editingPurchaseId 
+      ? API_BASE_URL + '/api/purchases/' + posState.editingPurchaseId
+      : API_BASE_URL + '/api/purchases';
+    const method = posState.editingPurchaseId ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method: method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         purchaseDate: date,
@@ -1009,7 +1035,7 @@ async function submitPurchaseInvoice() {
 
     const result = await res.json();
     if (result.success) {
-      alert('進貨單儲存成功！庫存餘額已自動累加。');
+      alert(posState.editingPurchaseId ? '進貨單更新成功！庫存已重新計算。' : '進貨單建立成功！庫存數量已自動增加。');
       closePurchaseModal();
       loadInventoryData();
     } else {
@@ -1349,6 +1375,9 @@ async function loadRecipeList() {
         <td>${item.unit}</td>
         <td style="color:var(--txt-muted); font-size:0.9rem;">$${estCost.toFixed(2)}</td>
         <td>
+          <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.8rem; margin-right:4px;" onclick="editRecipeRowItem(${item.ingredient_id}, ${item.quantity_required})">
+            編輯
+          </button>
           <button class="btn btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="deleteRecipeRowItem(${item.ingredient_id})">
             移除
           </button>
@@ -1399,9 +1428,37 @@ async function addRecipeItem() {
   }
 }
 
+async function editRecipeRowItem(ingredientId, currentQty) {
+  if (!currentRecipeDishId) return;
+  const newQty = prompt('請輸入新的配方需求量：', parseFloat(currentQty));
+  if (newQty === null) return; // user cancelled
+  const qty = parseFloat(newQty);
+  if (isNaN(qty) || qty <= 0) {
+    alert('請輸入大於 0 的有效數字');
+    return;
+  }
+  
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/dishes/${currentRecipeDishId}/recipe/${ingredientId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantityRequired: qty })
+    });
+    const result = await res.json();
+    if (result.success) {
+      await loadRecipeList();
+    } else {
+      alert('更新失敗: ' + result.error);
+    }
+  } catch (error) {
+    console.error('Error updating recipe item:', error);
+    alert('系統發生錯誤');
+  }
+}
+
 async function deleteRecipeRowItem(ingredientId) {
   if (!currentRecipeDishId) return;
-  if (!confirm('確定刪除此配方項目？')) return;
+  if (!confirm('確定要移除此配方嗎？')) return;
 
   try {
     const res = await fetch(`${API_BASE_URL}/api/dishes/${currentRecipeDishId}/recipe/${ingredientId}`, {

@@ -131,7 +131,6 @@ app.get('/api/inventory', async (req, res) => {
   res.json(rows);
 });
 
-// 取得進貨紀錄
 app.get('/api/purchases', async (req, res) => {
   const [pOrders] = await pool.query('SELECT * FROM purchase_orders ORDER BY purchase_date DESC, purchase_id DESC');
   for (const po of pOrders) {
@@ -637,7 +636,51 @@ app.get('/api/reports/ingredient-consumption', async (req, res) => {
   `;
   const [rows] = await pool.query(sql, d.params);
   res.json(rows);
+// 編輯指定配方項目
+app.put('/api/dishes/:dishId/recipe/:ingredientId', async (req, res) => {
+  try {
+    const { quantityRequired } = req.body;
+    await pool.query('UPDATE recipe_items SET quantity_required = ? WHERE dish_id = ? AND ingredient_id = ?', [quantityRequired, req.params.dishId, req.params.ingredientId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
+
+// 編輯進貨單
+app.put('/api/purchases/:id', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const purchaseId = req.params.id;
+    const { supplier, purchaseDate, items } = req.body;
+    
+    const [oldItems] = await conn.query('SELECT ingredient_id, quantity FROM purchase_order_items WHERE purchase_id = ?', [purchaseId]);
+    for (const item of oldItems) {
+      await conn.query('UPDATE ingredients SET stock_quantity = stock_quantity - ? WHERE ingredient_id = ?', [item.quantity, item.ingredient_id]);
+    }
+    
+    await conn.query('DELETE FROM purchase_order_items WHERE purchase_id = ?', [purchaseId]);
+    
+    let totalCost = 0;
+    items.forEach(i => totalCost += (i.quantity * i.cost_per_unit));
+    await conn.query('UPDATE purchase_orders SET supplier = ?, purchase_date = ?, total_cost = ? WHERE purchase_id = ?', [supplier || null, purchaseDate, totalCost, purchaseId]);
+    
+    for (const item of items) {
+      await conn.query('INSERT INTO purchase_order_items (purchase_id, ingredient_id, quantity, cost_per_unit) VALUES (?, ?, ?, ?)', [purchaseId, item.ingredient_id, item.quantity, item.cost_per_unit]);
+      await conn.query('UPDATE ingredients SET stock_quantity = stock_quantity + ? WHERE ingredient_id = ?', [item.quantity, item.ingredient_id]);
+    }
+    
+    await conn.commit();
+    res.json({ success: true });
+  } catch (err) {
+    await conn.rollback();
+    res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
+  }
+});
+
 
 // 啟動伺服器，監聽 PORT
 const PORT = process.env.PORT || 3000;
