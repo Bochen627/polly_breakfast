@@ -994,6 +994,24 @@ function removePurchaseRowItem(index) {
   renderPurchaseInputItems();
 }
 
+function editPurchaseRowItem(index) {
+  const item = posState.purchaseInputItems[index];
+  const newQtyStr = prompt(`請輸入 [${item.name}] 的新進貨數量：`, item.quantity);
+  if (newQtyStr === null) return;
+  const newQty = parseFloat(newQtyStr);
+  if (isNaN(newQty) || newQty <= 0) return alert('請輸入有效的數量');
+
+  const currentTotalCost = item.quantity * item.cost_per_unit;
+  const newCostStr = prompt(`請輸入 [${item.name}] 的新總成本：`, currentTotalCost);
+  if (newCostStr === null) return;
+  const newCost = parseFloat(newCostStr);
+  if (isNaN(newCost) || newCost < 0) return alert('請輸入有效的成本');
+
+  item.quantity = newQty;
+  item.cost_per_unit = newCost / newQty;
+  renderPurchaseInputItems();
+}
+
 function renderPurchaseInputItems() {
   const tbody = document.getElementById('purchaseInputItemsBody');
   tbody.innerHTML = '';
@@ -1011,7 +1029,10 @@ function renderPurchaseInputItems() {
       <td>${item.quantity.toFixed(1)} ${item.unit}</td>
       <td>$${item.cost_per_unit.toFixed(2)}</td>
       <td>$${subtotal.toFixed(0)}</td>
-      <td><button class="btn btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="removePurchaseRowItem(${index})">移除</button></td>
+      <td>
+        <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.8rem; margin-right:4px;" onclick="editPurchaseRowItem(${index})">編輯</button>
+        <button class="btn btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="removePurchaseRowItem(${index})">移除</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
