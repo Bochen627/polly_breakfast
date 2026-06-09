@@ -347,7 +347,7 @@
 
       <div style="border-top:1px solid var(--border); padding-top:16px; margin-bottom:16px; text-align:left;">
         <label>新增進貨原料項目</label>
-        <div class="form-row" style="grid-template-columns: 2fr 1fr 1fr 60px; gap:8px; align-items:flex-end;">
+        <div class="form-row" style="grid-template-columns: 2fr 1fr 1fr auto; gap:8px; align-items:flex-end;">
           <div>
             <select id="purchaseSelectIngredient" class="form-control">
               <!-- Loaded via JS -->
@@ -359,7 +359,7 @@
           <div>
             <input type="number" id="purchaseInputCost" class="form-control" placeholder="總金額/元" min="0" step="any">
           </div>
-          <button class="btn btn-secondary" onclick="addPurchaseRowItem()" style="padding:10px; width:100%;">新增</button>
+          <button class="btn btn-secondary" onclick="addPurchaseRowItem()" style="padding:10px; white-space:nowrap;">新增</button>
         </div>
       </div>
 
@@ -464,7 +464,7 @@
       
       <div style="border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:16px; text-align:left;">
         <label>新增配方原料需求</label>
-        <div class="form-row" style="grid-template-columns: 2fr 1fr 80px; gap:8px; align-items:flex-end;">
+        <div class="form-row" style="grid-template-columns: 2fr 1fr auto; gap:8px; align-items:flex-end;">
           <div>
             <select id="recipeSelectIngredient" class="form-control">
               <!-- Loaded via JS -->
@@ -473,7 +473,7 @@
           <div>
             <input type="number" id="recipeInputQty" class="form-control" placeholder="需求量" min="0.01" step="any">
           </div>
-          <button class="btn btn-secondary" onclick="addRecipeItem()" style="padding:10px; width:100%;">新增原料</button>
+          <button class="btn btn-secondary" onclick="addRecipeItem()" style="padding:10px; white-space:nowrap;">新增原料</button>
         </div>
       </div>
 
