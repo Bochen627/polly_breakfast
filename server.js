@@ -517,7 +517,7 @@ app.get('/api/reports/ingredient-consumption', async (req, res) => {
     JOIN orders o ON oi.order_id = o.order_id 
     WHERE o.status = 'Paid' ${d.oFilter} 
     GROUP BY i.ingredient_id, i.ingredient_name, i.unit 
-    ORDER BY loss_cost DESC 
+    ORDER BY consumed_quantity DESC 
     LIMIT 10
   `;
   const [rows] = await pool.query(sql, d.params);

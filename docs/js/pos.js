@@ -1474,8 +1474,8 @@ function renderScrapLossChart(data) {
   } else {
     const limit = 10;
     const topItems = data.slice(0, limit);
-    labels = topItems.map(item => item.ingredient_name);
-    values = topItems.map(item => parseFloat(item.loss_cost));
+    labels = topItems.map(item => `${item.ingredient_name} (${item.unit})`);
+    values = topItems.map(item => parseFloat(item.consumed_quantity));
   }
 
   const ctx = document.getElementById('scrapLossChart').getContext('2d');
@@ -1484,7 +1484,7 @@ function renderScrapLossChart(data) {
     data: {
       labels: labels,
       datasets: [{
-        label: '消耗金額 ($)',
+        label: '消耗量',
         data: values,
         backgroundColor: 'rgba(239, 68, 68, 0.85)',
         hoverBackgroundColor: '#dc2626',
